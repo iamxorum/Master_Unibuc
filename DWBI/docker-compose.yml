@@ -1,0 +1,66 @@
+services:
+  oracle-db:
+    image: container-registry.oracle.com/database/enterprise:19.3.0.0
+    container_name: DW_BI
+    restart: unless-stopped
+
+    ports:
+      - "1515:1521"   # Oracle Listener
+      - "1516:5500"   # OEM Express
+
+    environment:
+      ORACLE_SID: "${ORACLE_SID}"
+      ORACLE_PDB: "${ORACLE_PDB}"
+      ORACLE_PWD: "${ORACLE_PWD}"
+      ORACLE_EDITION: enterprise
+      ORACLE_CHARACTERSET: "AL32UTF8"
+      ENABLE_ARCHIVELOG: "true"
+      INIT_SGA_SIZE: "2048"
+      INIT_PGA_SIZE: "1024"
+
+    volumes:
+      - /opt/dwbi_project/oradata:/opt/oracle/oradata:rw
+      - /opt/dwbi_project/scripts/startup:/opt/oracle/scripts/startup:rw
+      - /opt/dwbi_project/scripts/setup:/opt/oracle/scripts/setup:rw
+
+    shm_size: "2g"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc: 16384
+
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+    networks:
+      dwbi-net:
+        ipv4_address: 172.20.0.10
+
+  # oracle-exporter:
+  #   image: iamseth/oracledb_exporter:latest
+  #   container_name: DW_BI-oracle-exporter
+  #   environment:
+  #     - DATA_SOURCE_NAME=system/${ORACLE_PWD}@172.20.0.10:1521/${ORACLE_PDB}
+  #     - LD_LIBRARY_PATH=/opt/oracle/instantclient:$LD_LIBRARY_PATH
+  #   ports:
+  #     - "9161:9161"
+  #    networks:
+  #     dwbi-net:
+  #       ipv4_address: 172.20.0.11
+  #   restart: unless-stopped
+
+networks:
+  dwbi-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
