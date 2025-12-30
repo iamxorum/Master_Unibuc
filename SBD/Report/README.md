@@ -1,6 +1,6 @@
 # Referat "Securitatea Bazelor de Date - PostgreSQL"
 
-# Schema bazei de date
+## Schema bazei de date
 
 Pentru referatul acesta (care va vi implementat în continuare pentru aplicația de evaluare SBD) o să mă folosesc de un DB Schema simplu compus de 3 entitățiȘ
 - pacient
@@ -11,7 +11,10 @@ Relațiile sunt următoarele:
 - Pacient (1) ------- (N) Fișă_medicală
 - Personal_medical (1) ------- (N) Fișă_medicală
 
-# Securitatea rețelei
+[Fisier init.sql](./database/init.sql)
+![Schema](./assets/Schema_creation.png)
+
+## Securitatea rețelei
 
 Primul pas pentru securizarea bazei de date este de a stabili cine și cum poate accesa baza de date prin intermediul fișierului pg_gba.conf unde acolo se stabilește ce range-uri de IP sunt granted sau rejected pentru acces (Este practica bună să fie securizat la nivel de firewall acces-ul dar este bine să existe un onion layer în cazul în care firewall-ul nu mai funcționează).
 
@@ -45,3 +48,33 @@ Conexiune prin hostssl (eșec)
 
 Conexiune prin host (success)
 ![hostssl Dezactivat](./assets/host.png)
+
+## Controlul accessului
+
+Pnetru referatul acest, o să abordez despre 3 tip-uri de access control (mentionate și la cursul SBD)Ș
+- RBAC Role Based Access Control
+- MAC Mandatory Access Control
+- DAC Discretionary Access Control
+
+### RBAC
+
+Acest tip de access control bazează accessul prin roluri. În loc de a configura pentru fiecare personal_medical ce are voie să facă, să vadă, să modifice, să steargă (CRUD), stabilim asta pe baza de rol așa că daca e nevoie să se steargă/adauge/modifce o regulă de access, este mai ușor de intretinut/mentinut pentru ca se face doar odată schimbarea.
+
+[Fisier acces.sql](./database/access_control/RBAC/access.sql)
+![Rulare RBAC](./assets/Access_RBAC.png)
+
+Dupa ce am creat rolurile/userii pentru access, putem testa (prin linie de comandă).
+
+Se poate observa că medicul chair are access la orice (poate să adauge/stearga pacienti noi spre exemplu), când asistentul vede totul dar nu are drept de modificarea/ștergerea/adaugarea a datelor. În final, rezidentul are acces doar la fișele medicale.
+
+Rol Medic
+![Rol Medic](./assets/RBAC/Screen1.png)
+
+Rol Asistent
+![Rol Asistent](./assets/RBAC/Screen2.png)
+
+Rol Rezident
+![Rol Rezident](./assets/RBAC/Screen3.png)
+
+Verificare roluri
+![Verficare RBAC](./assets/RBAC/Screen4.png)

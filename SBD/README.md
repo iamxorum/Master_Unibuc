@@ -2,4 +2,4 @@
 
 - Curs
 - Laborator
-- Referat
+- [Referat](./Report/)
