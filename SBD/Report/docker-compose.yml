@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16
+    container_name: postgres_referat
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: referat_db
+    ports:
+      # 10.80.0.40 este IP-ul de la VPS prin conexiune VPN
+      - "10.80.0.40:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
