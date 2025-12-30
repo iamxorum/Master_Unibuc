@@ -101,3 +101,33 @@ Dupa ce s-a rulat acces-ul pentru RLS, se poate vedea cum fiecare user poate sa 
 
 Testare MAC
 ![Testare MAC](./assets/MAC/Screen1.png)
+
+## Auditare
+
+Auditarea permite înregistrarea tuturor operațiunilor efectuate asupra datelor sensibile pentru a putea urmări și analiza accesul la informații. În PostgreSQL, aceasta poate fi implementată folosind trigger-uri care înregistrează automat fiecare operațiune (INSERT, UPDATE, DELETE) într-un tabel de audit.
+
+[Fisier audit.sql](./database/audit/audit.sql)
+
+Implementarea folosește un tabel `audit_log` care stochează:
+- Tabelul afectat
+- Tipul operației (INSERT, UPDATE, DELETE)
+- Utilizatorul care a efectuat operația (session_user)
+- Timestamp-ul acțiunii
+- Datele vechi și noi (pentru UPDATE)
+- Adresa IP a utilizatorului
+
+Trigger-ele sunt configurate pentru toate tabelele sensibile (fisa_medicala, pacient, personal_medical) și se declanșează automat la fiecare modificare.
+
+Testare Insert
+![Testare Insert](./assets/audit/Screen1.png)
+
+Verificare Audit
+![Testare Audit](./assets/audit/Screen2.png)
+
+### Alternativă: pgAudit
+
+Se poate folosi extensia "pgAudit" pentru medii de producție, care oferă auditare detaliată la nivel de sesiune și obiect. Toate operațiunile PostgreSQL sunt înregistrate de pgAudit și pot fi analizate folosind pgAudit Analyze, care încarcă datele într-un schema de bază de date pentru analiză.
+
+Beneficiile pgAudit includ auditare la nivel de sesiune (toate comenzile SQL), auditare la nivel de obiect (DDL, DML pe anumite tabele) și integrare cu sistemul de logare PostgreSQL. De asemenea, pgAudit Analyze permite analiză avansată.
+
+https://access.crunchydata.com/documentation/pgaudit-analyze/1.0.9/pdf/pgaudit_analyze.pdf
