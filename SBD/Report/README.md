@@ -61,7 +61,7 @@ Pnetru referatul acest, o să abordez despre 3 tip-uri de access control (mentio
 Acest tip de access control bazează accessul prin roluri. În loc de a configura pentru fiecare personal_medical ce are voie să facă, să vadă, să modifice, să steargă (CRUD), stabilim asta pe baza de rol așa că daca e nevoie să se steargă/adauge/modifce o regulă de access, este mai ușor de intretinut/mentinut pentru ca se face doar odată schimbarea.
 
 [Fisier acces.sql](./database/access_control/RBAC/access.sql)
-![Rulare RBAC](./assets/Access_RBAC.png)
+![Rulare RBAC](./assets/RBAC/Access_RBAC.png)
 
 Dupa ce am creat rolurile/userii pentru access, putem testa (prin linie de comandă).
 
@@ -78,3 +78,14 @@ Rol Rezident
 
 Verificare roluri
 ![Verficare RBAC](./assets/RBAC/Screen4.png)
+
+### DAC
+
+Acest tip de access control permite proprietarului unui obiect (tabel, înregistrare) să decidă direct cine are acces. Permisiunile sunt acordate individual fiecărui utilizator, oferind control granular asupra accesului la date.
+
+[Fisier acces.sql](./database/access_control/DAC/access.sql)
+
+Cum se poate observa, dupa ce medicul a primit rolul de SELECT access pe fisa_medicala cu optinue de a da mai departe, userul elena.constantinescu (asistent) a primit permisiunea de SELECT pe acelasi tabel si se poate observa ca a primit accessul.
+
+Testare DAC
+![Testare DAC](./assets/DAC/Screen1.png)
