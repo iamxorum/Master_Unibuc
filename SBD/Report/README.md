@@ -89,3 +89,15 @@ Cum se poate observa, dupa ce medicul a primit rolul de SELECT access pe fisa_me
 
 Testare DAC
 ![Testare DAC](./assets/DAC/Screen1.png)
+
+### MAC
+
+Acest tip de access control este impus de sistem pe baza unor etichete de securitate și reguli stricte (în cazul âsta `grad_acreditare` pentru personal și `nivel_clasificare` pentru fițele medicale). Accesul este determinat de nivelul de clasificare al datelor și al utilizatorului, fără posibilitatea modificării de către utilizatori (prin intermediul RLS - Row Level Security).
+
+[Fisier acces.sql](./database/access_control/MAC/access.sql)
+![Rulare MAC](./assets/MAC/Access_MAC.png)
+
+Dupa ce s-a rulat acces-ul pentru RLS, se poate vedea cum fiecare user poate sa vadă doar înregistrările care au nivelul_clasificare mai mic sau egal cu propriul lor grad_acreditare.
+
+Testare MAC
+![Testare MAC](./assets/MAC/Screen1.png)
