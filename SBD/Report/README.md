@@ -131,3 +131,17 @@ Se poate folosi extensia "pgAudit" pentru medii de producție, care oferă audit
 Beneficiile pgAudit includ auditare la nivel de sesiune (toate comenzile SQL), auditare la nivel de obiect (DDL, DML pe anumite tabele) și integrare cu sistemul de logare PostgreSQL. De asemenea, pgAudit Analyze permite analiză avansată.
 
 https://access.crunchydata.com/documentation/pgaudit-analyze/1.0.9/pdf/pgaudit_analyze.pdf
+
+## Prevenirea SQL Injection
+
+Un atacator folosește SQL Injection, care este printre cele mai frecvente atacuri asupra bazelor de date, în care injectează cod SQL fals în interogări prin concatenarea string-urilor. Soluția implică interogările parametrizate pregătite, care separă codul SQL de datele utilizatorului.
+
+[Fisier exemplu](./database/security/sql_injection_example.sql)
+
+În PostgreSQL, se pot folosi prepared statements cu `PREPARE` și `EXECUTE`, sau funcții PL/pgSQL care acceptă parametri. Acestea previne injectarea de cod SQL deoarece parametrii sunt tratați ca date, nu ca parte a comenzii SQL.
+
+Testare Injection
+![Testare Injection](./assets/injection/Screen1.png)
+
+Verificare Injection
+![Verificare Injection](./assets/injection/Screen2.png)
