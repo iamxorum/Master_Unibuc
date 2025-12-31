@@ -1,4 +1,4 @@
-# Referat "Securitatea Bazelor de Date - PostgreSQL"
+# Referat "Securitatea Bazelor de Date - PostgreSQL (Community)"
 
 ## Schema bazei de date
 
@@ -145,3 +145,80 @@ Testare Injection
 
 Verificare Injection
 ![Verificare Injection](./assets/injection/Screen2.png)
+
+## Criptarea Datelor
+
+Criptarea datelor este esențială pentru protejarea informațiilor sensibile împotriva accesului neautorizat. PostgreSQL oferă multiple opțiuni de criptare la diferite niveluri, oferind flexibilitate în protejarea datelor împotriva furtului serverului, administratorilor necinstiti și rețelelor nesigure.
+
+### Tipuri de Criptare
+
+PostgreSQL suportă următoarele tipuri de criptare:
+
+- **Full Disk Encryption** - Criptare completă a discului sau partiției
+- **File System Encryption** - Criptare la nivel de sistem de fișiere
+- **Column Level Encryption** - Criptare pentru coloane specifice cu date sensibile
+- **Password Storage Encryption** - Criptare pentru stocarea parolelor
+
+[Fisier exemple criptare](./database/security/encryption_examples.sql)
+
+### Full Disk Encryption - La nivel de OS
+
+Una dintre cele mai bune metode de protejare a datelor este criptarea completă a discului sau a partiției. Această tehnică asigură protecția atât a fiecărui fișier, cât și a stocării temporare care poate conține părți ale acestora. Nu trebuie să te îngrijorezi să alegi ce fișier vrei să protejezi, deoarece criptarea completă a discului protejează toate fișierele.
+
+Avem diverse opțiuni (depinde de OS-ul pe care îl folosim):
+- **FileVault** - pentru macOS
+![FileVault](./assets/encryption/FileVault.png)
+
+- **BitLocker** - pentru Windows 
+![BitLocker](./assets/encryption/BitLocker.png)
+
+- **LUKS (Linux Unified Key Setup)** - pentru Linux
+
+### File System Encryption
+
+Criptarea la nivel de sistem de fișiere, denumită și criptare de fișiere sau directoare, este atunci când sistemul de fișiere însuși criptează fișierele sau directoarele.
+
+**Notă importantă:** Criptarea la nivel de sistem sau disc complet protejează fișierele sau discurile împotriva atacurilor fizice pe hardware care nu rulează (cum ar fi un hard disk furat), dar nu protejează sistemul care rulează, nici nu permite utilizatorilor să controleze datele din baza de date.
+
+### Column Level Encryption
+
+Pentru criptare la nivel de coloană, se poate folosi extensia pgcrypto. Aceasta permite criptarea selectivă a coloanelor cu date sensibile, cum ar fi numerele CNP și cardurile de credit.
+
+În cazul tabelelor pe care le avem, am creat o entitate noua pentru a arata diferenta intre a citi având cheia de decriptare și fară cheie.
+
+După ce am creat uneltele necesare (verificați `encryption.sql`), mai jos se poate observa diferenta când, după ce s-a introdus pacient-ul cu criptarea cnp-ului, se face citirea fâră sau cu cheie.
+
+Fâră cheie de decriptare
+![Fâră cheie de decriptare](./assets/encryption/Select_fara_cheie.png)
+
+Cu cheie de decriptare
+![Cu cheie de decriptare](./assets/encryption/Select_cu_cheie.png)
+
+Pentru tabelul curent `pacient`, am criptat coloana prin comanda următoare
+
+```sql
+ALTER TABLE pacient
+ALTER COLUMN cnp TYPE BYTEA
+USING encrypt_cnp(cnp, 'portocal12');
+```
+Pacient criptat
+![Pacient criptat](./assets/encryption/Pacient_criptat.png)
+
+### Network-based Encryption
+
+Criptarea la nivel de rețea protejează datele în tranzit între client și server. În PostgreSQL, aceasta se realizează prin SSL/TLS. Am menționat anterior opțiunea `hostssl` în `pg_hba.conf` care necesită conexiuni SSL.
+
+### Password Storage Encryption
+
+PostgreSQL folosește deja criptare pentru stocarea parolelor. Am menționat anterior folosirea `scram-sha-256` în loc de `md5` pentru autentificare.
+
+## Views pentru Securitate
+
+Views pot îmbunătăți securitatea datelor prin ascunderea structurii tabelelor și limitarea accesului. Putem face vizualizări care expun doar coloanele necesare și aplică filtrare automată în loc să acordăm permisiuni direct tabelelor.
+
+[Fisier exemple views](./database/security/views_security.sql)
+
+**Exemplu:** În loc să acordăm `SELECT` pe întregul tabel `pacient`, creăm un view `pacient_public` care expune doar nume, prenume și telefon, ascunzând CNP-ul și adresa completă.
+
+Testare View
+![Testare View](./assets/encryption/View.png)
