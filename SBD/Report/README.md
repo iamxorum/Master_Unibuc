@@ -1,5 +1,9 @@
 # Referat "Securitatea Bazelor de Date - PostgreSQL (Community)"
 
+## Abstract
+
+În acest referat se efectuează o analiză detaliată a mecanismelor de securitate disponibile în ediția `Community a PostgreSQL`, demonstrând cum pot fi utilizate pe o bază de date medicală simplă formată din trei entități principale: `pacient`, `personal_medical` și `fișă_medicală`. Lucrarea abordează mai multe straturi de securitate, inclusiv securitatea rețelei prin utilizarea metodelor de autentificare sigure `(scram-sha-256)` și configurarea fișierului `pg_hba.conf` pentru controlul accesului bazat pe IP. Cele paradigme fundamentale ale controlului accesului sunt examinate: Gestionarea accesului bazat pe rol `(RBAC)`, controlul accesului discreționar `(DAC)` și controlul accesului obligatoriu `(MAC)` care sunt implementate prin siguranța nivelului rândului `(RLS)`. Referatul prezintă modul de implementare a unui sistem de auditare care utilizează trigger-uri PostgreSQL pentru înregistrarea tuturor operațiunilor legate de date sensibile, precum și metode de prevenire a atacurilor de tip `SQL Injection` prin utilizarea declarațiilor pregătite. În ceea ce privește criptarea, există o serie de metode diferite. Acestea includ criptarea la nivel de disc complet folosind programe precum `FileVault`, `BitLocker` și `LUKS`; criptarea la nivel de coloană folosind extensia `pgcrypto`; criptarea în tranzit prin `SSL/TLS`. În cele din urmă, se arată cum se utilizează vizualizările `(Views)` pentru a îmbunătăți securitatea datelor prin ascunderea structurii tabelelor și limitarea accesului la date.
+
 ## Schema bazei de date
 
 Pentru referatul acesta (care va vi implementat în continuare pentru aplicația de evaluare SBD) o să mă folosesc de un DB Schema simplu compus de 3 entitățiȘ
@@ -158,6 +162,8 @@ PostgreSQL suportă următoarele tipuri de criptare:
 - **File System Encryption** - Criptare la nivel de sistem de fișiere
 - **Column Level Encryption** - Criptare pentru coloane specifice cu date sensibile
 - **Password Storage Encryption** - Criptare pentru stocarea parolelor
+
+https://info.enterprisedb.com/rs/069-ALB-339/images/Security-best-practices-2020.pdf
 
 [Fisier exemple criptare](./database/security/encryption_examples.sql)
 
