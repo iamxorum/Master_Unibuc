@@ -211,3 +211,14 @@ Criptarea la nivel de rețea protejează datele în tranzit între client și se
 ### Password Storage Encryption
 
 PostgreSQL folosește deja criptare pentru stocarea parolelor. Am menționat anterior folosirea `scram-sha-256` în loc de `md5` pentru autentificare.
+
+## Views pentru Securitate
+
+Views pot îmbunătăți securitatea datelor prin ascunderea structurii tabelelor și limitarea accesului. Putem face vizualizări care expun doar coloanele necesare și aplică filtrare automată în loc să acordăm permisiuni direct tabelelor.
+
+[Fisier exemple views](./database/security/views_security.sql)
+
+**Exemplu:** În loc să acordăm `SELECT` pe întregul tabel `pacient`, creăm un view `pacient_public` care expune doar nume, prenume și telefon, ascunzând CNP-ul și adresa completă.
+
+Testare View
+![Testare View](./assets/encryption/View.png)
