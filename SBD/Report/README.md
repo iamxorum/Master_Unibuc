@@ -128,7 +128,7 @@ Testare Insert
 Verificare Audit
 ![Testare Audit](./assets/audit/Screen2.png)
 
-### Alternativă: pgAudit
+### pgAudit
 
 Se poate folosi extensia "pgAudit" pentru medii de producție, care oferă auditare detaliată la nivel de sesiune și obiect. Toate operațiunile PostgreSQL sunt înregistrate de pgAudit și pot fi analizate folosind pgAudit Analyze, care încarcă datele într-un schema de bază de date pentru analiză.
 
