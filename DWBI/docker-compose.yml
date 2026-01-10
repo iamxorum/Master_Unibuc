@@ -19,9 +19,9 @@ services:
       INIT_PGA_SIZE: "1024"
 
     volumes:
-      - /opt/dwbi_project/oradata:/opt/oracle/oradata:rw
-      - /opt/dwbi_project/scripts/startup:/opt/oracle/scripts/startup:rw
-      - /opt/dwbi_project/scripts/setup:/opt/oracle/scripts/setup:rw
+      - /opt/master_unibuc/DWBI/oradata:/opt/oracle/oradata:rw
+      - /opt/master_unibuc/DWBI/scripts/startup:/opt/oracle/scripts/startup:rw
+      - /opt/master_unibuc/DWBI/scripts/setup:/opt/oracle/scripts/setup:rw
 
     shm_size: "2g"
     ulimits:
