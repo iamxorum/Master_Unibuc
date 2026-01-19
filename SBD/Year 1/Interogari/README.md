@@ -1,0 +1,31 @@
+# 📊 Interogări SQL CareConnect
+
+1. **Interogare care analizează performanța medicilor și departamentelor, combinând date despre consultații, pacienți și rețete. Folosește CTE-uri multiple, JOIN-uri (INNER, LEFT), funcții de agregare (COUNT, AVG, SUM), funcții analitice (RANK, DENSE_RANK), funcții pentru date (MONTHS_BETWEEN), CASE, subinterogări și GROUP BY/HAVING pentru a genera un raport comprehensiv despre activitatea medicală.**
+
+2. **Interogare care generează un raport despre pacienți, incluzând vârsta, alergiile și istoricul consultațiilor. Utilizează funcții de date (MONTHS_BETWEEN), funcții de agregare (COUNT), LISTAGG pentru concatenarea alergiilor, JOIN-uri multiple (LEFT JOIN) și GROUP BY cu HAVING pentru filtrarea pacienților cu minimum 3 programări. Oferă o vedere de ansamblu asupra pacienților frecvenți și stării lor medicale.**
+
+3. **Interogare care analizează statisticile despre medicamente și modul în care sunt prescrise, incluzând numărul de prescrieri, cantitățile și durata medie a tratamentelor. Folosește CTE pentru organizarea datelor, JOIN-uri multiple pentru conectarea informațiilor despre rețete și consultații, funcții de agregare (COUNT, SUM, AVG) pentru statistici, și funcții analitice (DENSE_RANK) pentru clasificarea popularității medicamentelor. Rezultatele sunt ordonate după numărul de prescrieri, oferind o vedere de ansamblu asupra utilizării medicamentelor în clinică.**
+
+4. **Interogare care analizează programările medicale pe zile și ore, calculând rata de prezență a pacienților și urgența medie. Folosește funcții de dată (TO_CHAR), agregare (COUNT, AVG), JOIN-uri multiple, GROUP BY cu HAVING, și CASE pentru ordonarea zilelor săptămânii. Include filtrare temporală (ADD_MONTHS) și calculează statistici despre medici și departamente implicate în programări.**
+
+5. **Interogarea analizează eficiența departamentelor prin măsurarea ratei de finalizare a programărilor, costurilor per consultație și rețetă, folosind un CTE pentru agregarea datelor inițiale. Utilizează JOIN-uri multiple, funcții de agregare (COUNT, SUM), calcule procentuale, RANK pentru clasificare și NULLIF pentru evitarea împărțirii la zero. Rezultatul oferă o vedere de ansamblu asupra performanței fiecărui departament, ordonată după rata de finalizare.**
+
+6. **Interogare care identifică medicii care au toate specializările relevante pentru departamentul lor (folosind operatorul DIVISION prin NOT EXISTS). Utilizează JOIN-uri pentru conectarea tabelelor MEDIC, DEPARTAMENT și SPECIALIZARE, și subinterogări pentru a verifica dacă medicul are toate specializările necesare departamentului său. Demonstrează utilizarea operatorului DIVISION, JOIN-uri multiple și subinterogări în WHERE.**
+
+7. **Interogare care analizează medicamentele prescrise, calculând statistici despre frecvența prescrierii, costurile asociate și stocuri. Utilizează GROUP BY și HAVING pentru agregare, DECODE și CASE pentru categorizare, JOIN-uri multiple pentru conectarea informațiilor despre rețete și medicamente, funcții de agregare (COUNT, SUM, AVG) și DENSE_RANK pentru clasificarea popularității medicamentelor.**
+
+8. **Interogare care identifică medicii și specializările lor, împreună cu numărul de consultații și programări. Utilizează JOIN-uri multiple pentru a conecta tabelele MEDIC, SPECIALIZARE și DEPARTAMENT, funcții de agregare (COUNT), GROUP BY pentru gruparea rezultatelor, și ORDER BY pentru sortare. Include și funcții pentru manipularea șirurilor de caractere (concatenare) și CASE pentru categorizarea medicilor după experiență.**
+
+9. **Interogare care identifică medicii care au toate specializările relevante pentru departamentul lor, folosind operatorul DIVISION (implementat prin NOT EXISTS). Utilizează JOIN-uri multiple pentru a conecta tabelele MEDIC, DEPARTAMENT și SPECIALIZARE, și folosește LIKE pentru a verifica corespondența între numele departamentului și specializări. Exemplifică utilizarea subinterogărilor în WHERE și operații pe mulțimi.**
+
+10. **Interogare care identifică medicii și specializările lor, folosind LISTAGG pentru concatenarea specializărilor și LEFT JOIN pentru a include toți medicii. Utilizează funcții de agregare (COUNT), GROUP BY pentru grupare pe medici, și ORDER BY pentru ordonarea rezultatelor după numărul de specializări. Oferă o vedere de ansamblu asupra pregătirii profesionale a medicilor din fiecare departament.**
+
+11. **Interogare care identifică medicii și specializările lor, folosind LISTAGG pentru concatenarea specializărilor și LEFT JOIN pentru a include toți medicii. Utilizează funcții de agregare (COUNT), GROUP BY pentru gruparea pe medici, și ORDER BY pentru ordonarea rezultatelor după numărul de specializări. Oferă o vedere de ansamblu asupra pregătirii profesionale a medicilor din sistem.**
+
+12. **Interogare care analizează distribuția programărilor pe zile ale săptămânii și intervale orare (Dimineața, După-amiază, Seara). Folosește funcții de dată (TO_CHAR), CASE pentru categorizarea intervalelor orare, funcții de agregare (COUNT), calcule procentuale și GROUP BY pentru a genera statistici despre frecvența programărilor. Rezultatele sunt ordonate după ziua săptămânii pentru o vizualizare clară a pattern-urilor de programare.**
+
+13. **Interogare care analizează programările pe zile și ore, calculând rata de prezență a pacienților și urgența medie. Folosește funcții de dată (TO_CHAR), GROUP BY cu HAVING, funcții de agregare (COUNT, AVG), JOIN-uri multiple și CASE pentru ordonarea zilelor săptămânii. Oferă o perspectivă asupra momentelor cu cel mai mare grad de ocupare și a eficienței programărilor.**
+
+14. **Interogare care calculează statistici despre eficiența fiecărui departament, incluzând numărul de medici, programări, consultații și bugetul alocat. Folosește CTE pentru structurare, JOIN-uri (LEFT JOIN), funcții de agregare (COUNT, SUM, AVG), CASE pentru categorizare, NULLIF pentru evitarea împărțirii la zero, și RANK pentru clasificarea departamentelor după activitate. Rezultatele sunt ordonate după rata de finalizare a consultațiilor.**
+
+15. **Interogare care afișează structura ierarhică a gradelor profesionale ale medicilor (Primar -> Specialist -> Rezident), folosind START WITH și CONNECT BY. Include și numărul de medici pentru fiecare grad profesional.**
