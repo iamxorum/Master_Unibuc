@@ -1,0 +1,286 @@
+\chapter{CareConnect} 
+
+\section{Prezentarea modelului proiectat}
+
+Arhiva repository: https://github.com/iamxorum/Master\_Unibuc
+
+Baza de date CareConnect este un sistem medical care gestionează informații despre pacienți, personalul medical și fișele medicale asociate. Modelul este proiectat pentru a demonstra mecanisme avansate de securitate în Oracle Database, respectând principiile de confidențialitate și integritate a datelor medicale sensibile.
+
+Sistemul este structurat pe patru entități principale:
+
+\begin{itemize}
+    \item \textbf{DEPARTAMENT} - reprezintă departamentele medicale ale instituției (ex: Cardiologie, Neurologie)
+    \item \textbf{PERSONAL\_MEDICAL} - angajații sistemului medical (medici, asistenți, personal de recepție, administratori)
+    \item \textbf{PACIENT} - pacienții înregistrați în sistem
+    \item \textbf{FISA\_MEDICALA} - fișele medicale asociate pacienților, create de medici
+\end{itemize}
+
+\subsection{Reguli de business}
+
+Modelul respectă următoarele reguli de business:
+
+\begin{enumerate}
+    \item Fiecare pacient are un CNP unic, care este criptat în baza de date folosind AES-256
+    \item Fiecare fișă medicală este asociată unui pacient și unui medic responsabil
+    \item Fișele medicale au un nivel de confidențialitate (1, 2 sau 3) care determină accesul utilizatorilor
+    \item Personalul medical este organizat pe departamente și are un rol (MEDIC, ASISTENT, RECEPȚIE, ADMIN) cu un grad de acces corespunzător (1-4)
+    \item Fiecare membru al personalului medical are un cont Oracle Database asociat pentru autentificare
+\end{enumerate}
+
+\section{Diagrama conceptuală}
+
+Diagrama conceptuală a modelului este prezentată în Figura.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/assets/DB Diagram.png}
+    \caption{Diagrama CareConnect}
+    \label{fig:diagrama-conceptuala}
+\end{figure}
+
+Aceasta ilustrează entitățile principale și relațiile dintre ele:
+
+\begin{itemize}
+    \item \textbf{DEPARTAMENT} $\leftrightarrow$ \textbf{PERSONAL\_MEDICAL}: relație 1:N (un departament are mai mulți angajați)
+    \item \textbf{PERSONAL\_MEDICAL} $\leftrightarrow$ \textbf{FISA\_MEDICALA}: relație 1:N (un medic poate crea mai multe fișe)
+    \item \textbf{PACIENT} $\leftrightarrow$ \textbf{FISA\_MEDICALA}: relație 1:N (un pacient poate avea mai multe fișe medicale)
+\end{itemize}
+
+\section{Schemele relaționale}
+
+Schema relațională a bazei de date este următoarea:
+
+\begin{description}
+    \item[\textbf{DEPARTAMENT}]
+     
+    \item[\textbf{PERSONAL\_MEDICAL}]
+    \begin{itemize}
+        \item FK: id\_departament $\rightarrow$ DEPARTAMENT(id\_departament)
+        \item Constraint: rol $\in$ \{'MEDIC', 'ASISTENT', 'ADMIN', 'RECEPTIE'\}
+        \item Constraint: grad\_acces $\in$ \{0, 1, 2, 3, 4\}
+    \end{itemize}
+    
+    \item[\textbf{PACIENT}]
+    \begin{itemize}
+        \item Constraint: sex $\in$ \{'M', 'F'\}
+        \item Constraint: grupa\_sanguina $\in$ \{'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'\}
+        \item Notă: cnp este de tip RAW(100) - stocat criptat
+    \end{itemize}
+    
+    \item[\textbf{FISA\_MEDICALA}]
+    \begin{itemize}
+        \item FK: id\_pacient $\rightarrow$ PACIENT(id\_pacient)
+        \item FK: id\_medic $\rightarrow$ PERSONAL\_MEDICAL(id\_personal)
+        \item Constraint: nivel\_confidentialitate $\in$ \{1, 2, 3\}
+    \end{itemize}
+    
+    \item[\textbf{ENCRYPTION\_KEYS}]
+    \begin{itemize}
+        \item Tabel auxiliar pentru stocarea cheilor de criptare AES-256
+    \end{itemize}
+\end{description}
+
+\section{Crearea tabelelor}
+
+Scriptul de creare a tabelelor este disponibil în fișierul.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/assets/Schema.png}
+    \caption{Schema CareConnect}
+    \label{fig:schema}
+\end{figure}
+
+Structura cheilor primare și a relațiilor este următoarea:
+
+\begin{itemize}
+    \item \textbf{Chei primare}: id\_departament, id\_personal, id\_pacient, id\_fisa, key\_id
+    \item \textbf{Secvențe}: seq\_departament, seq\_personal, seq\_pacient, seq\_fisa
+    \item \textbf{Relații}: 
+    \begin{itemize}
+        \item PERSONAL\_MEDICAL.id\_departament $\rightarrow$ DEPARTAMENT.id\_departament
+        \item FISA\_MEDICALA.id\_pacient $\rightarrow$ PACIENT.id\_pacient
+        \item FISA\_MEDICALA.id\_medic $\rightarrow$ PERSONAL\_MEDICAL.id\_personal
+    \end{itemize}
+\end{itemize}
+
+\section{Reguli de securitate}
+
+Fiecare personal\_medical are propriul user in Database creat cu privilegiile acordate ulterior pe baza gradului/rolului de acces dat la creare; pentru demo avem 4 înregistrari, 1 pentru fiecare rol și mai jos se poate observa existența lor ca useri in baza de date; adăugarea unor noi membrii în personalul medical creează un alt user respectiv in baza de date (se poate observa și în audit log).
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/Screenshot 2026-01-22 at 23.47.31.png}
+    \caption{DB Users}
+    \label{fig:DB Users}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/Screenshot 2026-01-22 at 23.48.51.png}
+    \caption{DB Users Audit}
+    \label{fig:DB Users audit}
+\end{figure}
+
+\subsection{Controlul accesului}
+
+\begin{enumerate}
+    \item \textbf{Role-Based Access Control (RBAC)}: Sistemul definește patru roluri ierarhice:
+    \begin{itemize}
+        \item \texttt{ROL\_RECEPTIE} (grad\_acces=1): poate înregistra pacienți noi, citește date limitate
+        \item \texttt{ROL\_ASISTENT} (grad\_acces=2): moștenește privilegiile recepției, poate citi fișe medicale cu nivel $\leq$ 2
+        \item \texttt{ROL\_MEDIC} (grad\_acces=3): moștenește privilegiile asistentului, poate crea/modifica fișe medicale, poate decripta CNP
+        \item \texttt{ROL\_ADMIN} (grad\_acces=4): acces complet, poate gestiona personalul, roti chei de criptare, accesează audit logs
+    \end{itemize}
+    
+    \item \textbf{Virtual Private Database (VPD)}: Implementat prin Row-Level Security (RLS) pentru filtrarea automată a fișelor medicale pe baza nivelului de confidențialitate și gradului de acces al utilizatorului
+    
+    \item \textbf{Views cu mascare}: Fiecare rol are view-uri dedicate care maschează datele sensibile (CNP, email, telefon, adresă) conform nivelului de acces
+\end{enumerate}
+
+Mai jos se pot oberva exemple de acces diferite bazate pe fiecare rol/grad de acces:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/RBAC_Proj/Screenshot 2026-01-22 at 23.05.48.png}
+    \caption{Fisa medical - acces grad 1}
+    \label{fig:rbac}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/RBAC_Proj/Screenshot 2026-01-22 at 23.07.33.png}
+    \caption{Fisa medical - acces grad 2}
+    \label{fig:rbac}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/RBAC_Proj/Screenshot 2026-01-22 at 23.07.59.png}
+    \caption{Fisa medical - acces grad 3}
+    \label{fig:rbac}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/RBAC_Proj/Screenshot 2026-01-22 at 23.09.26.png}
+    \caption{Fisa medical - acces grad 0}
+    \label{fig:rbac}
+\end{figure}
+
+\subsection{Criptarea datelor}
+
+\begin{enumerate}
+    \item \textbf{Criptare CNP}: CNP-ul pacienților este criptat folosind DBMS\_CRYPTO cu algoritmul AES-256 în modul CBC
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.14.45.png}
+    \caption{CNP Criptat}
+    \label{fig:crypt cnp}
+\end{figure}
+    \item \textbf{Stocare chei}: Cheile de criptare sunt stocate într-un tabel separat (ENCRYPTION\_KEYS) cu acces restricționat
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.16.39.png}
+    \caption{Chei de criptare AES256-CBC}
+    \label{fig:AES256 CBC}
+\end{figure}
+    \item \textbf{Rotire chei}: Procedură implementată pentru rotirea periodică a cheilor de criptare
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.22.32.png}
+    \caption{Rotire chei de criptare}
+    \label{fig:rotire chei}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.23.43.png}
+    \caption{Lista chei}
+    \label{fig:lista chei}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.26.16.png}
+    \caption{Audit Rotire chei}
+    \label{fig:audit rotire chei}
+\end{figure}
+    \item \textbf{Audit decriptări}: Toate decriptările CNP-ului sunt înregistrate în audit log
+
+\end{enumerate}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.27.56.png}
+    \caption{Audit decriptare CNP}
+    \label{fig:audit decriptare CNP}
+\end{figure}
+
+\subsection{Auditarea}
+
+\begin{enumerate}
+    \item \textbf{Trigger-i de auditare}: Implementați pentru înregistrarea modificărilor (INSERT/UPDATE/DELETE) pe tabelele principale cu capturarea valorilor vechi și noi
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/audit_proj/Screenshot 2026-01-22 at 23.31.21.png}
+    \caption{Audit prin triggers}
+    \label{fig:trigger audits}
+\end{figure}
+    \item \textbf{Fine-Grained Auditing (FGA)}: Politici configurate pentru auditarea accesărilor la coloane sensibile (CNP, chei de criptare, fișe cu nivel confidențialitate 3)
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/audit_proj/Screenshot 2026-01-22 at 23.33.32.png}
+    \caption{Audit FGA}
+    \label{fig:trigger FGA}
+\end{figure}
+\end{enumerate}
+
+In aplicația CLI, doar cine are gradul 4 poate avea acces la audit logs:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/audit_proj/Screenshot 2026-01-22 at 23.34.47.png}
+    \caption{Audit - grad 4}
+    \label{fig:audit granted}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/audit_proj/Screenshot 2026-01-22 at 23.35.08.png}
+    \caption{Audit - grad < 4}
+    \label{fig:audit interzis}
+\end{figure}
+
+\subsection{Prevenirea atacurilor}
+
+\begin{enumerate}
+    \item \textbf{SQL Injection}: Toate operațiile sunt realizate prin proceduri și funcții PL/SQL cu parametri bind, eliminând construirea dinamică de query-uri
+    \item \textbf{Application Context}: Context Oracle pentru stocarea gradului de acces în sesiune, setat automat la login
+    \item \textbf{Profiluri utilizatori}: Configurate pentru limitarea resurselor (CPU, sesiuni, timp idle) și gestionarea parolelor
+\end{enumerate}
+
+\subsection{Mascarea datelor}
+
+\begin{enumerate}
+    \item \textbf{Funcții de mascare}: Implementate pentru telefon, email, adresă și CNP (mascare parțială sau totală)
+    \item \textbf{Views per rol}: Fiecare rol are view-uri dedicate care aplică mascarea corespunzătoare nivelului de acces
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/mascare/Screenshot 2026-01-22 at 23.36.50.png}
+    \caption{View pacienti - grad 1}
+    \label{fig:view grad 1}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/mascare/Screenshot 2026-01-22 at 23.38.09.png}
+    \caption{View pacienti - grad 3}
+    \label{fig:view grad 3}
+\end{figure}
+    \item \textbf{Decriptare condiționată}: Doar medicii și adminii pot decripta CNP-ul complet.
+\end{enumerate}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/assets/crypt/Screenshot 2026-01-22 at 23.41.23.png}
+    \caption{Decriptare CNP}
+    \label{fig:Decriptare CNP}
+\end{figure}

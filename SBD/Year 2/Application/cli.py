@@ -581,6 +581,57 @@ class CareConnectCLI:
             self.error(e)
         self.wait()
 
+    def rotate_key(self):
+        self.header()
+        console.print("\n[bold]Rotire Cheie Criptare[/bold]\n")
+        if self.grad < 4:
+            console.print("[red]Doar admin poate roti cheile![/red]")
+            self.wait()
+            return
+        
+        try:
+            rows = self.query("""
+                SELECT key_id, key_name, is_active, created_date
+                FROM careconnect.encryption_keys
+                WHERE key_name = 'CNP_KEY' AND is_active = 1
+            """)
+            if rows:
+                console.print("[bold]Cheie activă curentă:[/bold]")
+                self.show_table(rows, ["ID", "Nume", "Activă", "Creată"], show_time=False)
+            
+            count = self.query("SELECT COUNT(*) FROM careconnect.pacient WHERE cnp IS NOT NULL")[0][0]
+            console.print(f"\n[yellow]Atenție:[/yellow] {count} CNP-uri vor fi re-criptate cu noua cheie.")
+            
+            if not Confirm.ask("\nEști sigur că vrei să rotești cheia de criptare?"):
+                console.print("[dim]Operațiune anulată.[/dim]")
+                self.wait()
+                return
+            
+            console.print("\n[dim]Rotire în curs...[/dim]")
+            self.execute("BEGIN careconnect.rotate_encryption_key; END;")
+            
+            rows = self.query("""
+                SELECT key_id, key_name, is_active, created_date
+                FROM careconnect.encryption_keys
+                WHERE key_name = 'CNP_KEY' AND is_active = 1
+            """)
+            if rows:
+                console.print("\n[green]✓ Cheia a fost rotită cu succes![/green]")
+                console.print("[bold]Noua cheie activă:[/bold]")
+                self.show_table(rows, ["ID", "Nume", "Activă", "Creată"], show_time=False)
+            
+            test_rows = self.query("""
+                SELECT COUNT(*) 
+                FROM careconnect.pacient 
+                WHERE cnp IS NOT NULL
+            """)
+            if test_rows and test_rows[0][0] > 0:
+                console.print("\n[green]✓ Decriptarea funcționează corect cu noua cheie.[/green]")
+                
+        except oracledb.Error as e:
+            self.error(e)
+        self.wait()
+
     # ===========================================
     # MAIN
     # ===========================================
@@ -607,10 +658,17 @@ class CareConnectCLI:
             console.print("3. Personal Medical")
             console.print("4. Decriptare CNP")
             console.print("5. Audit Log")
-            console.print("6. Schimbă utilizator")
-            console.print("0. Ieșire")
+            if self.grad >= 4:
+                console.print("6. Rotire cheie criptare")
+                console.print("7. Schimbă utilizator")
+                console.print("0. Ieșire")
+                choices = ["0", "1", "2", "3", "4", "5", "6", "7"]
+            else:
+                console.print("6. Schimbă utilizator")
+                console.print("0. Ieșire")
+                choices = ["0", "1", "2", "3", "4", "5", "6"]
             
-            choice = Prompt.ask("\nSelectează", choices=["0", "1", "2", "3", "4", "5", "6"])
+            choice = Prompt.ask("\nSelectează", choices=choices)
             
             if choice == "0":
                 self.disconnect()
@@ -627,6 +685,11 @@ class CareConnectCLI:
             elif choice == "5":
                 self.view_audit()
             elif choice == "6":
+                if self.grad >= 4:
+                    self.rotate_key()
+                else:
+                    self.disconnect()
+            elif choice == "7":
                 self.disconnect()
 
 

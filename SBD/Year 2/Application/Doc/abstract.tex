@@ -1,0 +1,9 @@
+\begin{abstractpage}
+
+\begin{abstract}{romanian}
+Această aplicație analizează în detaliu sistemele de securitate Oracle Database disponibile, demonstrând implementarea acestora pe o bază de date medicală CareConnect care constă din următoarele entități: pacient, personal medical, fișă medicală și departament. În această lucrare sunt abordate criptarea datelor sensibile (CNP) prin utilizarea DBMS\_CRYPTO și algoritmul AES-256 în modul CBC. De asemenea, sunt implementate proceduri de rotire a cheilor de criptare. Trei mecanisme suplimentare sprijină sistemul de auditare: auditarea standard Oracle, trigger-ii de auditare pentru înregistrarea modificărilor și auditarea fină (FGA) pentru urmărirea accesului la date critice.
+Role-Based Access Control (RBAC) gestionează accesul folosind o ierarhie de roluri (recepție, asistent, medic, administrație) și o bază de date privată virtuală (VPD). VPD-ul oferă securitatea la nivel de rând și vizualizări cu mascare de date pentru a proteja datele sensibile.  Procedurile și funcțiile PL/SQL nu permit SQL Injection, eliminând construirea dinamică de query-uri în aplicațiile client. Toate aceste mecanisme de securitate sunt demonstrate în practică în aplicația CLI Python CareConnect.
+\end{abstract}
+
+\end{abstractpage}
+    
