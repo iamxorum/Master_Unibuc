@@ -1,121 +1,121 @@
 # CareConnect Security
 
-Proiect SBD Year 2 - Securitatea Bazelor de Date Oracle
-
-## Descriere
-
-Aplicație bazată pe schema CareConnect (Year 1) adaptată pentru demonstrarea conceptelor de securitate în Oracle Database.
-
 ## Structura Proiectului
 
 ```
 Application/
-├── docker-compose.yml          # Oracle XE 21c container
-├── database/
-│   ├── init/
-│   │   └── 01_schema.sql       # Schema de bază (4 tabele)
-│   ├── 02_encryption.sql       # TODO: Criptare CNP cu DBMS_CRYPTO
-│   ├── 03_audit.sql            # TODO: Trigger-i și politici de audit
-│   ├── 04_roles.sql            # TODO: RBAC - roluri și privilegii
-│   ├── 05_masking.sql          # TODO: Views pentru mascare date
-│   └── 06_app_security.sql     # TODO: Context aplicație + anti-injection
-├── frontend/                   # TODO: React mini-app
+├── docker-compose.yml              # Oracle XE 21c container
+├── cli.py                          # Aplicație CLI Python
+├── requirements.txt                # Dependențe Python
+├── database/init/
+│   ├── 01_schema.sql              # Tabele, secvențe
+│   ├── 02_encryption.sql           # Criptare AES-256 (CNP)
+│   ├── 03_views.sql                # Views cu mascare date
+│   ├── 04_privileges.sql          # RBAC - roluri, profile
+│   ├── 05_rls_policies.sql        # VPD (Row-Level Security)
+│   ├── 06_audit.sql               # Audit (standard, trigger, FGA)
+│   ├── 07_app_procedures.sql      # Funcții/proceduri PL/SQL
+│   └── 08_insert_mock.sql         # Date demo
 └── README.md
 ```
 
 ## Schema Bazei de Date
 
-### Entități (simplificat din CareConnect Year 1)
+```
+DEPARTAMENT (1) ──< PERSONAL_MEDICAL (N)
+                        │
+                        │ (1:N)
+                        ▼
+PACIENT (1) ──< FISA_MEDICALA (N)
+```
 
-```
-┌─────────────────┐     ┌─────────────────────┐
-│   DEPARTAMENT   │     │   PERSONAL_MEDICAL  │
-├─────────────────┤     ├─────────────────────┤
-│ id_departament  │◄────│ id_departament (FK) │
-│ nume_departament│     │ id_personal         │
-│ locatie         │     │ nume, prenume, cnp  │
-│ telefon_contact │     │ rol (RBAC)          │
-└─────────────────┘     │ grad_acces (MAC)    │
-                        │ username_db         │
-                        └──────────┬──────────┘
-                                   │
-                                   │ 1:N
-                                   ▼
-┌─────────────────┐     ┌─────────────────────┐
-│     PACIENT     │     │    FISA_MEDICALA    │
-├─────────────────┤     ├─────────────────────┤
-│ id_pacient      │◄────│ id_pacient (FK)     │
-│ nume, prenume   │     │ id_medic (FK)       │
-│ cnp (CRIPTAT)   │     │ diagnostic          │
-│ adresa (MASCAT) │     │ tratament           │
-│ data_nasterii   │     │ nivel_confident.    │
-└─────────────────┘     └─────────────────────┘
-```
+**Tabele principale:**
+- `departament` - Departamente medicale
+- `personal_medical` - Personal cu roluri (RECEPȚIE/ASISTENT/MEDIC/ADMIN)
+- `pacient` - CNP criptat (RAW), date personale
+- `fisa_medicala` - Fișe cu nivel_confidentialitate (1-3)
+- `encryption_keys` - Chei AES-256 pentru CNP
+- `audit_log` - Loguri de audit
+
+## Matrice de Privilegii
+
+| Obiect | RECEPȚIE (1) | ASISTENT (2) | MEDIC (3) | ADMIN (4) |
+|--------|--------------|-------------|-----------|-----------|
+| `departament` | R | R | R | CRUD |
+| `personal_medical` | R | R | R | CRUD |
+| `pacient` | CR | CR | CRU | CRUD |
+| `fisa_medicala` | R (VPD=1) | R (VPD≤2) | CRU | CRUD |
+| `encryption_keys` | - | - | R | CRUD |
+| `audit_log` | - | - | - | R |
+| `encrypt_cnp` | ✓ | ✓ | ✓ | ✓ |
+| `decrypt_cnp_audited` | - | - | ✓ | ✓ |
 
 ## Quick Start
 
-### 1. Pornire Oracle
-
 ```bash
+# 1. Pornire Oracle
 docker-compose up -d
+# Așteaptă ~2-3 minute
+
+# 2. Instalare dependențe
+pip install -r requirements.txt
+
+# 3. Rulare CLI
+python cli.py
 ```
 
-Așteaptă ~2-3 minute pentru inițializare. Verifică:
+## Utilizatori Demo
 
-```bash
-docker logs -f careconnect-oracle
-```
+| User | Parolă | Rol | Grad |
+|------|--------|-----|------|
+| ANA_POPESCU | Medic2026! | MEDIC | 3 |
+| MIHAI_IONESCU | Asistent2026! | ASISTENT | 2 |
+| ELENA_MARINESCU | Receptie2026! | RECEPȚIE | 1 |
+| ADMIN_SYSTEM | Admin2026! | ADMIN | 4 |
 
-### 2. Conectare
-
-**DataGrip / SQL Developer:**
-- Host: `localhost`
-- Port: `1521`
+**Conectare DB:**
+- Host: `localhost:1521`
 - Service: `XEPDB1`
-- User: `careconnect`
-- Password: `CareConnect123!`
+- User: `careconnect` / Password: `CareConnect123!`
 
-**SQLPlus (din container):**
-```bash
-docker exec -it careconnect-oracle sqlplus careconnect/CareConnect123!@XEPDB1
-```
+## Funcționalități de Securitate
 
-## Cerințe de Securitate Implementate
+### 1. Criptare (AES-256)
+- CNP-ul pacienților criptat cu `DBMS_CRYPTO`
+- Funcții: `encrypt_cnp()`, `decrypt_cnp_audited()`
+- Rotire chei: `rotate_encryption_key()`
 
-| # | Cerință | Status | Fișier |
-|---|---------|--------|--------|
-| 2 | Criptarea datelor | ⏳ TODO | `02_encryption.sql` |
-| 3 | Auditarea activităților | ⏳ TODO | `03_audit.sql` |
-| 4 | Gestiunea utilizatorilor | ⏳ TODO | `04_roles.sql` |
-| 5 | Privilegii și roluri | ⏳ TODO | `04_roles.sql` |
-| 6 | SQL Injection | ⏳ TODO | `06_app_security.sql` |
-| 7 | Mascarea datelor | ⏳ TODO | `05_masking.sql` |
+### 2. RBAC (Role-Based Access Control)
+- 4 roluri ierarhice: `ROL_RECEPTIE` → `ROL_ASISTENT` → `ROL_MEDIC` → `ROL_ADMIN`
+- Profile Oracle cu limite (sessions, CPU, idle_time, password)
+- Privilegii incrementale pe obiecte
 
-## Pași Următori
+### 3. VPD (Virtual Private Database)
+- Policy pe `FISA_MEDICALA`: filtrează după `nivel_confidentialitate <= grad_acces`
+- Context aplicație: `CARECONNECT_CTX` setat la logon
+- Trigger logon: `trg_set_context_on_logon`
 
-1. [ ] Pornește containerul și verifică schema
-2. [ ] Implementează criptarea CNP-ului (DBMS_CRYPTO)
-3. [ ] Adaugă trigger-i de audit
-4. [ ] Creează roluri și privilegii (RBAC)
-5. [ ] Implementează views pentru mascare
-6. [ ] Creează aplicația React
-7. [ ] Adaugă protecție SQL Injection
+### 4. Mascare Date
+- Views per rol cu date mascate (telefon, email, adresă, CNP parțial)
+- Funcții: `mask_telefon()`, `mask_email()`, `mask_adresa()`, `mask_cnp_partial()`
+
+### 5. Auditare
+- **Standard**: `AUDIT` pe tabele/funcții
+- **Trigger**: `trg_audit_*` pe INSERT/UPDATE/DELETE
+- **FGA**: Politici pe acces CNP, fișe confidențiale, chei criptare
+- Tabel: `audit_log` cu tipuri (TRIGGER, FGA, DECRYPT, GRANT)
+
+### 6. PL/SQL API
+- Funcții pipelined: `get_pacienti()`, `get_fise_medicale()`, `get_personal()`, `get_audit_log()`
+- Proceduri CRUD: `add_/update_/delete_pacient`, `add_/update_/delete_fisa_medicala`, `add_/update_/delete_personal`
+- Helper: `get_grad_acces()`, `get_role_name()`, `get_pacient_cnp_decriptat()`
 
 ## Comenzi Utile
 
 ```bash
-# Pornire
-docker-compose up -d
-
-# Oprire
-docker-compose down
-
-# Oprire + ștergere volume (reset complet)
-docker-compose down -v
-
-# Logs
+docker-compose up -d          # Pornire
+docker-compose down           # Oprire
+docker-compose down -v        # Reset complet
 docker logs -f careconnect-oracle
-
-# Shell în container
-docker exec -it careconnect-oracle bash
+docker exec -it careconnect-oracle sqlplus careconnect/CareConnect123!@XEPDB1
 ```
