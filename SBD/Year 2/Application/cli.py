@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-CareConnect CLI - Demonstrație securitate baze de date Oracle.
-Criptare AES-256, VPD, RBAC, Auditare, PL/SQL
-"""
-
 import oracledb
 from rich.console import Console
 from rich.table import Table
@@ -33,8 +28,8 @@ class CareConnectCLI:
         try:
             self.conn = oracledb.connect(
                 user=user, password=pwd,
-                dsn="//localhost:1521/XEPDB1"
-                # Alternative formats if the above doesn't work:
+                dsn="//10.80.0.40:1521/XEPDB1"
+                # dsn="//localhost:1521/XEPDB1"
                 # dsn="localhost:1521/XEPDB1"
                 # dsn="(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))"
             )
