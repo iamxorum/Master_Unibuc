@@ -1,0 +1,26 @@
+\chapter{Descrierea Modelului Ales și a Obiectivelor Aplicației}
+\label{sec:descriere}
+
+\section{Modelul de date ales}
+
+TickLy este un sistem de management al tichetelor de suport care permite gestionarea a cererilor de asistență de la clienți. Modelul de date ales este un \textbf{model entitate-relație} extins care suportă atât clienți persoane fizice, cât și juridice, cu un sistem flexibil de categorisire și urmărire a tichetelor.
+
+Sistemul este organizat în două straturi principale:
+\begin{itemize}
+    \item \textbf{Baza de date OLTP} - pentru operațiunile transacționale zilnice (creare tichete, comentarii, asignări agenți)
+    \item \textbf{Data Warehouse} - pentru analize și raportare (model stea pentru analize multidimensionale)
+\end{itemize}
+
+\section{Obiectivele Aplicației}
+
+Obiectivele principale ale aplicației TickLy sunt:
+
+\begin{enumerate}
+    \item \textbf{Gestionarea a tichetelor de suport} - urmărirea completă a ciclului de viață al tichetelor de la creare până la rezolvare
+    \item \textbf{Analiza performanțelor agenților} - monitorizarea timpului de rezolvare, numărul de tichete rezolvate, rating-urile primite
+    \item \textbf{Analiza satisfacției clienților} - urmărirea feedback-ului și identificarea tendințelor
+    \item \textbf{Optimizare} - analiza distribuției tichetelor pe departamente și agenți
+    \item \textbf{Identificarea problemelor recurente} - analiza categoriilor și subiectelor pentru a identifica problemele cele mai frecvente
+    \item \textbf{Raportare} - generarea de rapoarte pentru management
+\end{enumerate}
+
