@@ -104,7 +104,7 @@ create table dim_time (
    luna_nume         varchar2(20) not null,
    luna_abrev        varchar2(3) not null,
    zi                number(2) not null check ( zi between 1 and 31 ),
-   saptamana_an      number(2) check ( saptamana_an between 1 and 53 ),
+   saptamana_an      number(2) not null check ( saptamana_an between 1 and 53 ),
    zi_saptamana      number(1) not null check ( zi_saptamana between 1 and 7 ),
    zi_saptamana_nume varchar2(20) not null,
    este_weekend      char(1) default 'N' check ( este_weekend in ( 'Y',

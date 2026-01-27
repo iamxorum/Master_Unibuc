@@ -526,3 +526,62 @@ Dimensiunea temporală este populată prin proces ETL separat care generează to
 \hline
 \end{longtable}
 
+\chapter{Constrângerile Specifice Depozitelor de Date}
+\label{sec:constrainturi}
+
+\section{Constrângeri de Integritate Referențială}
+
+Toate tabelele dimensiune și tabelul de fapte folosesc constrângeri de cheie străină (FK) pentru a menține integritatea referențială:
+
+\begin{itemize}
+    \item \textbf{FK\_FACT\_CLIENT}: Asigură că fiecare ticket din \texttt{FACT\_TICKET} are un client valid în \texttt{DIM\_CLIENT}
+    \item \textbf{FK\_FACT\_AGENT}: Asigură că fiecare ticket are un agent valid în \texttt{DIM\_AGENT}
+    \item \textbf{FK\_FACT\_DEPARTAMENT}: Asigură că fiecare ticket aparține unui departament valid
+    \item \textbf{FK\_FACT\_CATEGORIE}: Asigură că categoria (dacă există) este validă
+    \item \textbf{FK\_FACT\_DATE\_CREARE}: Asigură că data de creare este validă în \texttt{DIM\_TIME}
+    \item \textbf{FK\_FACT\_DATE\_REZOLVARE}: Asigură că data de rezolvare este validă în \texttt{DIM\_TIME}
+    \item \textbf{FK\_FACT\_DATE\_INCHIDERE}: Asigură că data de închidere este validă în \texttt{DIM\_TIME}
+\end{itemize}
+
+\section{Constrângeri UNIQUE}
+
+\begin{itemize}
+    \item \textbf{UK\_FACT\_TICKET\_ID}: Asigură că fiecare \texttt{ticket\_id} apare o singură dată în \texttt{FACT\_TICKET} (prevenirea duplicatelor)
+    \item \textbf{UK\_DIM\_CLIENT\_ID}: Asigură unicitatea combinației \texttt{(client\_id, valid\_from)} pentru SCD Type 2
+    \item \textbf{UK\_DIM\_AGENT\_ID}: Asigură unicitatea combinației \texttt{(agent\_id, valid\_from)} pentru SCD Type 2
+    \item \textbf{UK\_DIM\_DEPARTAMENT\_ID}: Asigură unicitatea combinației \texttt{(departament\_id, valid\_from)} pentru SCD Type 2
+    \item \textbf{UK\_DIM\_TIME\_DATA}: Asigură că fiecare dată apare o singură dată în \texttt{DIM\_TIME}
+\end{itemize}
+
+\section{Constrângeri CHECK}
+
+\begin{itemize}
+    \item \textbf{CHECK pentru DIM\_TIME}:
+    \begin{itemize}
+        \item \texttt{trimestru BETWEEN 1 AND 4}
+        \item \texttt{luna BETWEEN 1 AND 12}
+        \item \texttt{zi BETWEEN 1 AND 31}
+        \item \texttt{saptamana\_an BETWEEN 1 AND 53}
+        \item \texttt{zi\_saptamana BETWEEN 1 AND 7}
+        \item \texttt{este\_weekend IN ('Y', 'N')}
+        \item \texttt{este\_sarbatoare IN ('Y', 'N')}
+        \item \texttt{zi\_lucratoare IN ('Y', 'N')}
+    \end{itemize}
+    \item \textbf{CHECK pentru FACT\_TICKET}:
+    \begin{itemize}
+        \item \texttt{rating\_feedback BETWEEN 1 AND 5}
+    \end{itemize}
+\end{itemize}
+
+\section{Justificarea Constrângerilor}
+
+\begin{enumerate}
+    \item \textbf{Constrângerile FK} previn inserarea de înregistrări orfane în tabelul de fapte și asigură că toate referințele la dimensiuni sunt valide.
+    
+    \item \textbf{Constrângerile UNIQUE} Mai multe înregistrări ale aceleiași entități cu intervale de valabilitate diferite sunt permise pentru SCD Type 2, ceea ce permite o istoricizare precisă a modificărilor.
+    
+    \item \textbf{Constrângerile CHECK} asigură validitatea datelor la nivel de aplicație, prevenind erorile de logică (spre exemplu: trimestru 5, luna 13, rating 6).
+    
+    \item \textbf{UK\_FACT\_TICKET\_ID} este critică pentru a preveni duplicarea tichetelor în procesul ETL, asigurând că fiecare ticket din OLTP apare exact o dată în DW.
+\end{enumerate}
+
