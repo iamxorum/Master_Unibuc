@@ -7,7 +7,6 @@ docs/*.aux
 docs/*.log
 docs/*.out
 docs/*.toc
-docs/*.pdf
 docs/*.fls
 docs/*.fdb_latexmk
 docs/*.synctex.gz
