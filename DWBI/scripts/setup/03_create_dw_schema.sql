@@ -112,7 +112,8 @@ create table dim_time (
    este_sarbatoare   char(1) default 'N' check ( este_sarbatoare in ( 'Y',
                                                                     'N' ) ),
    nume_sarbatoare   varchar2(100),
-   zi_lucratoare     number,
+   zi_lucratoare     char(1) default 'Y' check ( zi_lucratoare in ( 'Y',
+                                                               'N' ) ),
    constraint uk_dim_time_data unique ( data_completa )
 );
 
