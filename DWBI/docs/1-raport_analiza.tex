@@ -149,3 +149,380 @@ Modelul stea implementat pentru TickLy conține:
     \item \textbf{Dimensiune Conformată}: Dimensiunea temporală \texttt{DIM\_TIME}
 \end{itemize}
 
+\chapter{Descrierea Câmpurilor și Modul de Populare}
+\label{sec:campuri_populare}
+
+\section{Tabelul de Fapte: FACT\_TICKET}
+
+\subsubsection{Câmpuri și Sursa de Date}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{fact\_ticket\_id} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{ticket\_id} & NUMBER & Copiat direct din \texttt{TICKET.ticket\_id} \\
+\hline
+\texttt{client\_key} & NUMBER & Lookup în \texttt{DIM\_CLIENT} pe baza \texttt{TICKET.client\_id} \\
+\hline
+\texttt{agent\_key} & NUMBER & Lookup în \texttt{DIM\_AGENT} pe baza \texttt{TICKET\_AGENT.agent\_id} (agentul PRIMARY) \\
+\hline
+\texttt{departament\_key} & NUMBER & Lookup în \texttt{DIM\_DEPARTAMENT} pe baza \texttt{TICKET.departament\_id} \\
+\hline
+\texttt{categorie\_key} & NUMBER & Lookup în \texttt{DIM\_CATEGORIE} pe baza \texttt{TICKET.categorie\_id} (poate fi NULL) \\
+\hline
+\ttwrap{date\_creare\_key} & NUMBER & Lookup în \texttt{DIM\_TIME} pe baza \texttt{TICKET.data\_creare} \\
+\hline
+\ttwrap{date\_rezolvare\_key} & NUMBER & Lookup în \texttt{DIM\_TIME} pe baza \texttt{TICKET.data\_rezolvare} (poate fi NULL) \\
+\hline
+\ttwrap{date\_inchidere\_key} & NUMBER & Lookup în \texttt{DIM\_TIME} pe baza \texttt{TICKET.data\_inchidere} (poate fi NULL) \\
+\hline
+\texttt{status\_id} & NUMBER & Copiat direct din \texttt{TICKET.status\_id} \\
+\hline
+\texttt{status\_nume} & VARCHAR2 & JOIN cu \texttt{STATUS.nume} \\
+\hline
+\ttwrap{status\_este\_final} & CHAR(1) & JOIN cu \texttt{STATUS.este\_final} \\
+\hline
+\texttt{status\_ordine} & NUMBER & Calculat pe baza logicii de business (ordinea statusurilor) \\
+\hline
+\texttt{prioritate\_id} & NUMBER & Copiat direct din \texttt{TICKET.prioritate\_id} \\
+\hline
+\texttt{prioritate\_nivel} & NUMBER & JOIN cu \texttt{PRIORITATE.nivel} \\
+\hline
+\texttt{prioritate\_nume} & VARCHAR2 & JOIN cu \texttt{PRIORITATE.nume} \\
+\hline
+\ttwrap{prioritate\_timp\_raspuns\_ore} & NUMBER & JOIN cu \texttt{PRIORITATE.timp\_raspuns\_ore} \\
+\hline
+\texttt{numar\_ticketuri} & NUMBER & Constantă = 1 (granularitatea este un ticket) \\
+\hline
+\ttwrap{timp\_rezolvare\_ore} & NUMBER & Copiat din \texttt{TICKET.timp\_rezolvare\_ore} sau calculat: \texttt{DATA\_REZOLVARE - DATA\_CREARE} \\
+\hline
+\ttwrap{timp\_raspuns\_ore} & NUMBER & Calculat pe baza primului comentariu al agentului \\
+\hline
+\ttwrap{timp\_rezolvare\_minute} & NUMBER & \texttt{timp\_rezolvare\_ore * 60} \\
+\hline
+\texttt{rating\_feedback} & NUMBER & JOIN cu \texttt{FEEDBACK.rating} (1:1 cu TICKET) \\
+\hline
+\ttwrap{numar\_comentarii} & NUMBER & COUNT din \texttt{COMMENT\_CLIENT} și \texttt{COMMENT\_AGENT} pentru \texttt{ticket\_id} \\
+\hline
+\ttwrap{numar\_comentarii\_client} & NUMBER & COUNT din \texttt{COMMENT\_CLIENT} pentru \texttt{ticket\_id} \\
+\hline
+\ttwrap{numar\_comentarii\_agent} & NUMBER & COUNT din \texttt{COMMENT\_AGENT} pentru \texttt{ticket\_id} \\
+\hline
+\texttt{numar\_atasamente} & NUMBER & COUNT din \texttt{ATASAMENT} pentru \texttt{ticket\_id} \\
+\hline
+\texttt{cost\_estimativ} & NUMBER(10,2) & Calculat pe baza \texttt{TOPIC.tarif} sau \texttt{TOPIC.pret} asociat \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_CLIENT}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{client\_key} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{client\_id} & NUMBER & Copiat din \texttt{CLIENT.client\_id} \\
+\hline
+\texttt{email} & VARCHAR2 & Copiat din \texttt{CLIENT.email} \\
+\hline
+\texttt{phone} & VARCHAR2 & Copiat din \texttt{CLIENT.phone} \\
+\hline
+\ttwrap{registration\_date} & DATE & Copiat din \texttt{CLIENT.registration\_date} \\
+\hline
+\texttt{client\_type} & CHAR(1) & Copiat din \texttt{CLIENT.client\_type} ('F' sau 'J') \\
+\hline
+\texttt{nume} & VARCHAR2 & Copiat din \texttt{CLIENT\_FIZICA.nume} (dacă \texttt{client\_type = 'F'}) \\
+\hline
+\texttt{prenume} & VARCHAR2 & Copiat din \texttt{CLIENT\_FIZICA.prenume} (dacă \texttt{client\_type = 'F'}) \\
+\hline
+\texttt{cnp} & VARCHAR2 & Copiat din \texttt{CLIENT\_FIZICA.cnp} (dacă \texttt{client\_type = 'F'}) \\
+\hline
+\texttt{denumire} & VARCHAR2 & Copiat din \texttt{CLIENT\_JURIDICA.denumire} (dacă \texttt{client\_type = 'J'}) \\
+\hline
+\texttt{cui} & VARCHAR2 & Copiat din \texttt{CLIENT\_JURIDICA.cui} (dacă \texttt{client\_type = 'J'}) \\
+\hline
+\texttt{sediu\_social} & VARCHAR2 & Copiat din \texttt{CLIENT\_JURIDICA.sediu\_social} (dacă \texttt{client\_type = 'J'}) \\
+\hline
+\ttwrap{reprezentant\_legal} & VARCHAR2 & Copiat din \texttt{CLIENT\_JURIDICA.reprezentant\_legal} (dacă \texttt{client\_type = 'J'}) \\
+\hline
+\texttt{is\_active} & CHAR(1) & Calculat pe baza existenței tichetelor recente sau flag explicit \\
+\hline
+\texttt{valid\_from} & DATE & SYSDATE pentru înregistrări noi, sau data modificării pentru SCD Type 2 \\
+\hline
+\texttt{valid\_to} & DATE & NULL pentru înregistrări curente, sau data modificării pentru înregistrări istorice \\
+\hline
+\texttt{is\_current} & CHAR(1) & 'Y' dacă \texttt{valid\_to IS NULL}, altfel 'N' \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_AGENT}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{agent\_key} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{agent\_id} & NUMBER & Copiat din \texttt{AGENT.agent\_id} \\
+\hline
+\texttt{nume} & VARCHAR2 & Copiat din \texttt{AGENT.nume} \\
+\hline
+\texttt{prenume} & VARCHAR2 & Copiat din \texttt{AGENT.prenume} \\
+\hline
+\ttwrap{nume\_complet} & VARCHAR2 & Concatenare: \texttt{AGENT.nume || ' ' || AGENT.prenume} \\
+\hline
+\texttt{email} & VARCHAR2 & Copiat din \texttt{AGENT.email} \\
+\hline
+\texttt{telefon} & VARCHAR2 & Copiat din \texttt{AGENT.telefon} \\
+\hline
+\texttt{hire\_date} & DATE & Copiat din \texttt{AGENT.hire\_date} \\
+\hline
+\texttt{is\_active} & CHAR(1) & Copiat din \texttt{AGENT.is\_active} \\
+\hline
+\ttwrap{ani\_experienta} & NUMBER & Calculat: \texttt{TRUNC(MONTHS\_BETWEEN(SYSDATE, AGENT.hire\_date) / 12)} \\
+\hline
+\texttt{valid\_from} & DATE & SYSDATE pentru înregistrări noi, sau data modificării pentru SCD Type 2 \\
+\hline
+\texttt{valid\_to} & DATE & NULL pentru înregistrări curente, sau data modificării pentru înregistrări istorice \\
+\hline
+\texttt{is\_current} & CHAR(1) & 'Y' dacă \texttt{valid\_to IS NULL}, altfel 'N' \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_DEPARTAMENT}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{departament\_key} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{departament\_id} & NUMBER & Copiat din \texttt{DEPARTAMENT.departament\_id} \\
+\hline
+\texttt{nume} & VARCHAR2 & Copiat din \texttt{DEPARTAMENT.nume} \\
+\hline
+\texttt{descriere} & VARCHAR2 & Copiat din \texttt{DEPARTAMENT.descriere} \\
+\hline
+\ttwrap{manager\_nume} & VARCHAR2 & JOIN cu \texttt{AGENT} pe \texttt{DEPARTAMENT.manager\_id}: \texttt{AGENT.nume || ' ' || AGENT.prenume} \\
+\hline
+\texttt{manager\_email} & VARCHAR2 & JOIN cu \texttt{AGENT} pe \texttt{DEPARTAMENT.manager\_id}: \texttt{AGENT.email} \\
+\hline
+\texttt{numar\_agenti} & NUMBER & COUNT din \texttt{AGENT\_DEPARTAMENT} pentru \texttt{departament\_id} unde \texttt{este\_principal = 'Y'} \\
+\hline
+\texttt{valid\_from} & DATE & SYSDATE pentru înregistrări noi, sau data modificării pentru SCD Type 2 \\
+\hline
+\texttt{valid\_to} & DATE & NULL pentru înregistrări curente, sau data modificării pentru înregistrări istorice \\
+\hline
+\texttt{is\_current} & CHAR(1) & 'Y' dacă \texttt{valid\_to IS NULL}, altfel 'N' \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_CATEGORIE}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{categorie\_key} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{categorie\_id} & NUMBER & Copiat din \texttt{CATEGORIE.categorie\_id} \\
+\hline
+\texttt{nume} & VARCHAR2 & Copiat din \texttt{CATEGORIE.nume} \\
+\hline
+\texttt{descriere} & VARCHAR2 & Copiat din \texttt{CATEGORIE.descriere} \\
+\hline
+\ttwrap{categorie\_parinte\_id} & NUMBER & Copiat din \texttt{CATEGORIE.categorie\_parinte\_id} \\
+\hline
+\ttwrap{categorie\_parinte\_nume} & VARCHAR2 & Self-join cu \texttt{CATEGORIE} pe \texttt{categorie\_parinte\_id} pentru a obține numele părinte \\
+\hline
+\texttt{nivel\_ierarhie} & NUMBER & Calculat recursiv: nivelul în ierarhia categoriilor (1 = rădăcină) \\
+\hline
+\ttwrap{categorie\_completa} & VARCHAR2 & Concatenare a întregii ierarhii: "Categorie Părinte > Categorie Curentă" \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_TOPIC}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{topic\_key} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{topic\_id} & NUMBER & Copiat din \texttt{TOPIC.topic\_id} \\
+\hline
+\texttt{nume} & VARCHAR2 & Copiat din \texttt{TOPIC.nume} \\
+\hline
+\texttt{descriere} & VARCHAR2 & Copiat din \texttt{TOPIC.descriere} \\
+\hline
+\texttt{topic\_type} & CHAR(1) & Copiat din \texttt{TOPIC.topic\_type} ('S' sau 'P') \\
+\hline
+\texttt{tip\_serviciu} & VARCHAR2 & Copiat din \texttt{TOPIC\_SERVICIU.tip\_serviciu} (dacă \texttt{topic\_type = 'S'}) \\
+\hline
+\ttwrap{durata\_estimata} & NUMBER & Copiat din \texttt{TOPIC\_SERVICIU.durata\_estimata} (dacă \texttt{topic\_type = 'S'}) \\
+\hline
+\texttt{tarif} & NUMBER(10,2) & Copiat din \texttt{TOPIC\_SERVICIU.tarif} (dacă \texttt{topic\_type = 'S'}) \\
+\hline
+\texttt{versiune} & VARCHAR2 & Copiat din \texttt{TOPIC\_PRODUS.versiune} (dacă \texttt{topic\_type = 'P'}) \\
+\hline
+\texttt{pret} & NUMBER(10,2) & Copiat din \texttt{TOPIC\_PRODUS.pret} (dacă \texttt{topic\_type = 'P'}) \\
+\hline
+\texttt{stoc} & NUMBER & Copiat din \texttt{TOPIC\_PRODUS.stoc} (dacă \texttt{topic\_type = 'P'}) \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_TAG}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare din OLTP} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{tag\_key} & NUMBER & Generat automat (IDENTITY) \\
+\hline
+\texttt{tag\_id} & NUMBER & Copiat din \texttt{TAG.tag\_id} \\
+\hline
+\texttt{nume} & VARCHAR2 & Copiat din \texttt{TAG.nume} \\
+\hline
+\texttt{culoare} & VARCHAR2 & Copiat din \texttt{TAG.culoare} \\
+\hline
+\texttt{descriere} & VARCHAR2 & Copiat din \texttt{TAG.descriere} \\
+\hline
+\texttt{load\_date} & DATE & SYSDATE la momentul încărcării \\
+\hline
+\end{longtable}
+
+\section{Dimensiunea: DIM\_TIME}
+
+Dimensiunea temporală este populată prin proces ETL separat care generează toate datele dintr-un interval specificat (de exemplu, 2000-2050). Fiecare câmp este calculat pe baza datei complete:
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{8.7cm}|}
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Câmp} & \textbf{Tip} & \textbf{Mod de Populare} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\texttt{date\_key} & NUMBER & Format: YYYYMMDD (ex: 20250127) \\
+\hline
+\texttt{data\_completa} & DATE & Data completă \\
+\hline
+\texttt{an} & NUMBER(4) & \texttt{EXTRACT(YEAR FROM data\_completa)} \\
+\hline
+\texttt{trimestru} & NUMBER(1) & \texttt{TO\_NUMBER(TO\_CHAR(data\_completa, 'Q'))} \\
+\hline
+\texttt{luna} & NUMBER(2) & \texttt{EXTRACT(MONTH FROM data\_completa)} \\
+\hline
+\texttt{luna\_nume} & VARCHAR2 & \texttt{TO\_CHAR(data\_completa, 'Month')} \\
+\hline
+\texttt{luna\_abrev} & VARCHAR2 & \texttt{TO\_CHAR(data\_completa, 'Mon')} \\
+\hline
+\texttt{zi} & NUMBER(2) & \texttt{EXTRACT(DAY FROM data\_completa)} \\
+\hline
+\texttt{saptamana\_an} & NUMBER(2) & \texttt{TO\_NUMBER(TO\_CHAR(data\_completa, 'WW'))} \\
+\hline
+\ttwrap{zi\_saptamana} & NUMBER(1) & \texttt{TO\_NUMBER(TO\_CHAR(data\_completa, 'D'))} (1=Luni, 7=Duminică) \\
+\hline
+\ttwrap{zi\_saptamana\_nume} & VARCHAR2 & \texttt{TO\_CHAR(data\_completa, 'Day')} \\
+\hline
+\ttwrap{este\_weekend} & CHAR(1) & 'Y' dacă \texttt{zi\_saptamana IN (6,7)}, altfel 'N' \\
+\hline
+\ttwrap{este\_sarbatoare} & CHAR(1) & Verificare în tabel de sărbători legale \\
+\hline
+\ttwrap{nume\_sarbatoare} & VARCHAR2 & Numele sărbătorii (dacă există) \\
+\hline
+\ttwrap{zi\_lucratoare} & CHAR(1) & 'Y' dacă este zi lucrătoare, 'N' dacă este weekend sau sărbătoare (consistență cu \texttt{este\_weekend} și \texttt{este\_sarbatoare}) \\
+\hline
+\end{longtable}
+

@@ -101,6 +101,11 @@
 \newcommand{\bigO}[1]{\symcal{O}\left(#1\right)}
 \DeclarePairedDelimiter\abs{\lvert}{\rvert}
 
+% Comandă pentru wrapping în \texttt{} pentru nume lungi de câmpuri
+\newcommand{\ttwrap}[1]{%
+  \texttt{\seqsplit{#1}}%
+}
+
 % Suport pentru rezumat în două limbi
 % Bazat pe https://tex.stackexchange.com/a/70818
 \newenvironment{abstractpage}
@@ -118,6 +123,8 @@
 \usepackage{fancyhdr}
 
 % Pachete necesare pentru raportul de analiză (tabele, liste, figuri)
+\usepackage{array}  % Necesar pentru \arraybackslash în tabele
+\usepackage{seqsplit}  % Pentru wrapping în \texttt{} pentru nume lungi
 \usepackage{float}
 \usepackage{longtable}
 \usepackage{booktabs}
