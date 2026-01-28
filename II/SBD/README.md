@@ -1,5 +1,4 @@
 # Securitatea Baezlor de Date
 
-- Curs
-- Laborator
+- [Aplicație](./Application/)
 - [Referat](./Report/)

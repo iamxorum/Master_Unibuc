@@ -8,6 +8,9 @@ Small monorepo with coursework, labs and projects from the **University of Bucha
 - **Status**: recovering... 🛠️
 - **Notes**: some materials might be added retroactively when/if they resurface.
 
+- **`SBD` – Sisteme Bazelor de Date**
+  - Projects and implement Oracle DB.
+
 ---
 
 ### Year 2
