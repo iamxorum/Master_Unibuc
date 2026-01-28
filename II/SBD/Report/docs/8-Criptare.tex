@@ -1,0 +1,91 @@
+\chapter{Criptarea Datelor}
+
+Criptarea datelor este necesară pentru protejarea informațiilor sensibile împotriva accesului neautorizat.
+
+\section{Full Disk Encryption - La nivel de disk}
+Una dintre cele mai bune metode de protejare a datelor este criptarea completă a discului sau a partiției. Această tehnică asigură protecția atât a fiecărui fișier, cât și a stocării temporare care poate conține părți ale acestora. Nu trebuie să te îngrijorezi să alegi ce fișier vrei să protejezi, deoarece criptarea completă a discului protejează toate fișierele. \cite{edb_security_2020}
+
+Avem diverse opțiuni (depinde de OS-ul pe care îl folosim):
+Implementarea folosește un tabel "audit\_log" care stochează:
+\begin{itemize}
+    \item \textbf{MacOS - FileVault};
+    \item \textbf{Windows - BitLocker};
+    \item \textbf{Linux - LUKS (Linux Unified Key Setup)}.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/encryption/FileVault.png}
+        \caption{FileVault}
+        \label{fig:filvault}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/encryption/BitLocker.png}
+        \caption{BitLocker}
+        \label{fig:bitlocker}
+    \end{minipage}
+\end{figure}
+
+\section{File System Encryption - La nivel de os}
+
+Criptarea la nivel de sistem de fișiere, denumită și criptare de fișiere sau directoare, este atunci când sistemul de fișiere însuși criptează fișierele sau directoarele. \cite{edb_security_2020}
+
+\section{Criptarea la nivel de coloană}
+
+Pentru criptare la nivel de coloană, se poate folosi extensia "pgcrypto". Aceasta permite criptarea selectivă a coloanelor cu date sensibile, cum ar fi numerele CNP și cardurile de credit. \cite{edb_security_2020}
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.5\textwidth]{../assets/encryption/Screenshot 2025-12-31 at 19.59.16.png}
+    \caption{encryption.sql}
+    \label{fig:encryption.sql}
+\end{figure}
+
+În cazul tabelelor pe care le avem, am creat o entitate nouă pentru a arăta diferența între a citi având cheia de decriptare și fără cheie.
+
+După ce am creat uneltele necesare (verificați "encryption.sql" din imagine), mai jos se poate observa diferența când, după ce s-a introdus pacientul cu criptarea CNP-ului, se face citirea fără sau cu cheie.
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/encryption/Select_cu_cheie.png}
+        \caption{Cu cheie}
+        \label{fig:cu_cheie}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/encryption/Select_fara_cheie.png}
+        \caption{Fără cheie}
+        \label{fig:fara_cheie}
+    \end{minipage}
+\end{figure}
+
+Pentru tabelul curent "pacient", am criptat coloana prin comanda următoare:
+
+\begin{lstlisting}[caption={Migrarea coloanei CNP la format criptat (BYTEA)}, label={lst:encrypt_update}]
+ALTER TABLE pacient
+ALTER COLUMN cnp TYPE BYTEA
+USING encrypt_cnp(cnp, 'portocal12');
+\end{lstlisting}
+
+Jos se poate observa coloana "cnp" din tabelul "pacient" criptat după rularea comenzii de mai sus:
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.5\textwidth]{../assets/encryption/Pacient_criptat.png}
+    \caption{CNP Criptat}
+    \label{fig:cnp_criptat}
+\end{figure}
+
+\section{Criptare la nivel de rețea}
+
+Criptarea la nivel de rețea protejează datele în tranzit între client și server. În PostgreSQL, aceasta se realizează prin SSL/TLS. Am menționat anterior opțiunea "hostssl" în "pg\_hba.conf" care necesită conexiuni SSL.
+
+\section{Criptarea paroleor}
+PostgreSQL folosește deja criptare pentru stocarea parolelor. Am menționat anterior folosirea "scram-sha-256" în loc de "md5" pentru autentificare.

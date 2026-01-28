@@ -1,0 +1,23 @@
+\chapter{Visualizări pentru Securitate}
+
+Views pot îmbunătăți securitatea datelor prin ascunderea structurii tabelelor și limitarea accesului. Putem face vizualizări care expun doar coloanele necesare și aplică filtrare automată în loc să acordăm permisiuni direct tabelelor.
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/encryption/Screenshot 2025-12-31 at 20.09.52.png}
+        \caption{Creare Visualizări}
+        \label{fig:creare_views}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/encryption/View.png}
+        \caption{Testare Visualizare}
+        \label{fig:testare_view}
+    \end{minipage}
+\end{figure}
+
+\textbf{Exemplu} În loc să acordăm "SELECT" pe întregul tabel "pacient", creăm un view "pacient\_public" care expune doar nume, prenume și telefon, ascunzând CNP-ul și adresa completă. (vedeți mai sus la imaginea 8.2)
+

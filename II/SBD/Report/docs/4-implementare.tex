@@ -1,0 +1,44 @@
+\chapter{Securitatea Rețelei}
+
+Primul pas în securizarea bazei de date este de a determina cine și cum poate accesa baza de date în fișierul pg\_hba.conf, unde se stabilește ce intervale de IP sunt permise sau respinse pentru acces. Este util să se protejeze accesul la nivel de firewall, dar este util să existe înca un strat de securitate în cazul în care firewall-ul nu funcționează.
+
+\begin{center}
+\small % Micșorăm textul ca să încapă bine
+\begin{tabular}{l l l l l}
+\textbf \textbf{TYPE} & \textbf{DATABASE} & \textbf{USER} & \textbf{ADDRESS} & \textbf{METHOD} \\ \hline
+local & all & all & & scram-sha-256 \\
+host & all & all & 127.0.0.1/32 & scram-sha-256 \\
+host & all & all & 10.80.0.0/16 & scram-sha-256 \\
+host & all & all & 0.0.0.0/0 & reject \\
+host & all & all & ::/0 & reject \\
+\end{tabular}
+\end{center}
+
+Asta este o configurație minimală care permite acces-ul la baza de date in local cu parolă de autentificare; permite access-ul prin parola la userii care provin din range-ul de IP 10.80.0.0/16 (VPN in cazul acesta) și localhost; în final se dă reject la restul userilor care provin de altundeva la nivelul IPv4 și IPv6.
+
+O vulnerabilitate era să fie trecut pentru tipul de conexiune "local" metoda "trust" unde se permitea conexiunea fară parolă.
+
+O altă vulnerabilitate era folosirea metodei "md5" în loc de "scram-sha-256" deoarece md5 este mai nesigur (și-a pierdut setarea by default de la postgreSQL 14 unde scram-sha-256 este acum setat default).
+
+MD5 ca să fie considerat sigur trebuie să îndeplineasca următoarele:
+- Ar trebui să fie capabil să convertească ușor informații digitale, cum ar fi un mesaj, într-o valoare hash cu lungime fixă.
+- Hash-ul trebuie să fie imposibil de decriptat din punct de vedere computational pentru a obține orice informații despre mesajul de intrare.
+- Din punct de vedere computational, trebuie săe fie imposibil să se găsească două fișiere cu un hash identic.
+
+Din păcate al treilea punct nu este îndeplinit deoarece este posibil să se genereze același hash pentru două fișiere diferite; situația asta aduce la atacuri de tip coliziune, o vulneraibilitate extrem de ridicată, deoarece pot sa generez acelasi hash pentru o altă parolă spre exemplu. \cite{md5collisions}
+
+O altă metodă buna pentru securizarea accesului prin rețea este setarea tipului de conexiune in loc de "host" cu "hostssl". Pentru referat nu vom folosi SSL.
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.5\textwidth]{../assets/hostssl.png}
+    \caption{Conexiune cu Hostssl}
+    \label{fig:conexiune_hostssl}
+\end{figure}
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.5\textwidth]{../assets/host.png}
+    \caption{Conexiune cu Host}
+    \label{fig:conexiune_host}
+\end{figure}

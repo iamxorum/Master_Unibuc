@@ -1,0 +1,22 @@
+\chapter{Pregătirea mediului pentru referat}
+
+Instalarea PostgreSQL Community Edition și configurarea unui mediu de testare sunt necesare pentru a rula exemplele prezentate în acest referat. Pentru a face configurarea mediului proiectului mai simplă, Docker este folosit. 
+Mediul este pe un VPS închiriat (securizat prin regulile de firewall iptables) și accesat doar prin VPN (Wireguard); Subnet-ul de rețtea prin care se poace accessa (prin VPN) este 10.80.0.0/16 unde userii conecați prin VPN sunt pe subnet-ul 10.80.1.0/24 și VPS-urile/Nod-urile pe subnet-ul 10.80.0.0/24.
+
+\section{Cerințe}
+
+\begin{itemize}
+    \item \textbf{Docker și Docker Compose}: utilizate pentru containerizarea și orchestrarea serviciilor;
+    \item \textbf{PostgreSQL Community Edition} (versiunea 14 sau superioară): sistemul de gestiune a bazelor de date relaționale;
+    \item \textbf{Acces la linia de comandă}: necesar pentru execuția scripturilor SQL și administrarea containerelor.
+\end{itemize}
+
+\section{Pornirea mediului}
+
+Mediul poate să fie rulat oriunde, important că este instalat Docker și Docker Compose. 
+Comanda necesară pentru pornire este urmatoarea
+
+\begin{center}
+    \texttt{docker-compose up -d}
+\end{center}
+

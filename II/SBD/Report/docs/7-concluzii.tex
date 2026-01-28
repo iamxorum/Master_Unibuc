@@ -1,0 +1,22 @@
+\chapter{Prevenirea SQL Injection}
+
+SQL Injection este printre cele mai frecvente atacuri asupra bazelor de date, în care un atacator injectează cod SQL fals în interogări prin concatenarea string-urilor. Soluția implică interogările parametrizate pregătite, care separă codul SQL de datele utilizatorului.
+
+În PostgreSQL, se pot folosi prepared statements cu "PREPARE" și "EXECUTE", sau funcții PL/pgSQL care acceptă parametri. Acestea previne injectarea de cod SQL deoarece parametrii sunt tratați ca date, nu ca parte a comenzii SQL.
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/injection/Screen1.png}
+        \caption{Testare Injection}
+        \label{fig:testare_injection}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/injection/Screen2.png}
+        \caption{Verificare Injection}
+        \label{fig:verificare_injection}
+    \end{minipage}
+\end{figure}

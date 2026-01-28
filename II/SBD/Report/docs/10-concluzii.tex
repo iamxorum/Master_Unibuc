@@ -1,0 +1,12 @@
+\chapter{Concluzii}
+
+Acest referat a demonstrat implementarea practică a multiple straturi de securitate în PostgreSQL, utilizând o bază de date medicală ca studiu de caz. Principalele concluzii sunt:
+
+\begin{itemize}
+    \item \textbf{Securitatea rețelei}: prin configurarea corectă a "pg\_hba.conf" și utilizarea metodelor de autentificare sigure precum "scram-sha-256";
+    \item \textbf{Controlul accesului}: poate fi implementat prin trei paradigme complementare (RBAC, DAC, MAC);
+    \item \textbf{Auditare}: pentru urmărirea și analiza accesului la date sensibile, iar implementarea prin trigger-uri;
+    \item \textbf{Prevenirea SQL Injection}: prin utilizarea prepared statements;
+    \item \textbf{Criptarea}: la multiple niveluri (disc, coloană, rețea);
+    \item \textbf{Visualizări}: pentru ascunderea structurii bazei de date și limitarea accesului la date sensibile.
+\end{itemize}

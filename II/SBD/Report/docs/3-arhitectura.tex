@@ -1,0 +1,25 @@
+\chapter{Schema bazei de date}
+
+Pentru referatul acesta (care va fi implementat în continuare pentru aplicația de evaluare SBD) o să mă folosesc de un DB Schema simplu compus de 3 entități:
+
+\begin{itemize}
+    \item \textbf{pacient};
+    \item \textbf{personal\_medical};
+    \item \textbf{fisa\_medicala};
+\end{itemize}
+
+Relațiile sunt următoarele:
+
+\begin{itemize}
+    \item \textbf{Pacient (1) - (N) Fisa\_medicala};
+    \item \textbf{Personal\_medical (1) - (N) Fisa\_medicala};
+\end{itemize}
+
+Jos puteți observa rularea creării a schemei:
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.5\textwidth]{../assets/Schema_creation.png}
+    \caption{Creare schema}
+    \label{fig:creare_schema}
+\end{figure}

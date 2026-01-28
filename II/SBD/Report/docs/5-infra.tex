@@ -1,0 +1,85 @@
+\chapter{Controlul Accesului}
+
+Pentru referatul acesta, o să abordez 3 tipuri de access control (menționate și la cursul SBD):
+
+\begin{itemize}
+    \item \textbf{RBAC}: Role Based Access Control;
+    \item \textbf{MAC}: Mandatory Access Control;
+    \item \textbf{DAC}: Discretionary Access Control;
+\end{itemize}
+
+\section{Role Based Access Control}
+
+Acest tip de access control bazează accessul prin roluri. În loc de a configura pentru fiecare personal\_medical ce are voie să facă, să vadă, să modifice, să steargă (CRUD), stabilim asta pe baza de rol așa că daca e nevoie să se steargă/adauge/modifce o regulă de access, este mai ușor de intretinut/mentinut pentru ca se face doar odată schimbarea.
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.4\textwidth]{../assets/RBAC/Access_RBAC.png}
+    \caption{Configurare RBAC}
+    \label{fig:configurare_rbac}
+\end{figure}
+
+După ce am creat rolurile/userii pentru acces, putem testa (prin linie de comandă).
+
+Se poate observa că medicul chiar are acces la orice (poate să adauge/șteargă pacienți noi spre exemplu), când asistentul vede totul dar nu are drept de modificare/ștergere/adaugare a datelor. În final, rezidentul are acces doar la fișele medicale.
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/RBAC/Screen1.png}
+        \caption{Rol Medic}
+        \label{fig:rol_medic}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/RBAC/Screen2.png}
+        \caption{Rol Asistent}
+        \label{fig:rol_asistent}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/RBAC/Screen3.png}
+        \caption{Rol Rezident}
+        \label{fig:rol_rezident}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../assets/RBAC/Screen4.png}
+        \caption{Verificare Roluri}
+        \label{fig:verificare_roluri}
+    \end{minipage}
+\end{figure}
+
+\newpage
+\section{Discretionary Access Control}
+
+Acest tip de access control permite proprietarului unui obiect (tabel, înregistrare) să decidă direct cine are acces. Permisiunile sunt acordate individual fiecărui utilizator, oferind control granular asupra accesului la date.
+
+Cum se poate observa, după ce medicul a primit rolul de SELECT access pe "fisa\_medicala" cu opțiune de a da mai departe, userul "elena.constantinescu" (asistent) a primit permisiunea de SELECT pe același tabel și se poate observa că a primit accesul.
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.4\textwidth]{../assets/DAC/Screen1.png}
+    \caption{Testare DAC}
+    \label{fig:testare_dac}
+\end{figure}
+
+\section{Mandatory Access Control}
+
+Acest tip de access control este impus de sistem pe baza unor etichete de securitate și reguli stricte (în cazul acesta "grad\_acreditare" pentru personal și "nivel\_clasificare" pentru fișele medicale). Accesul este determinat de nivelul de clasificare al datelor și al utilizatorului, fără posibilitatea modificării de către utilizatori (prin intermediul RLS - Row Level Security).
+
+După ce s-a rulat acces-ul pentru RLS, se poate vedea cum fiecare user poate să vadă doar înregistrările care au "nivel\_clasificare" mai mic sau egal cu propriul lor "grad\_acreditare".
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=0.4\textwidth]{../assets/MAC/Screen1.png}
+    \caption{Testare MAC}
+    \label{fig:testare_mac}
+\end{figure}
