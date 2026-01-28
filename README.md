@@ -1,9 +1,21 @@
-# UniBuc - Master BDTS
+## UniBuc – Master BDTS
 
+Small monorepo with coursework, labs and projects from the **University of Bucharest – Master BDTS** program.
 
-Year 1 - Recovering...
-Year 2
-- [APD](./APD)
-- [CC](./CC)
-- [DWBI](./DWBI)
-- [SBD](./SBD)
+---
+
+### Year 1
+- **Status**: recovering... 🛠️
+- **Notes**: some materials might be added retroactively when/if they resurface.
+
+---
+
+### Year 2
+- **`APD` – Algoritmi Paraleli și Distribuiți**
+  - MPI / multithreading experiments, lab work, and small demos.
+- **`CC` – Cloud Computing**
+  - Azure-based homeworks, simple dashboards, microservices, deployment scripts.
+- **`DWBI` – Data Warehousing & Business Intelligence**
+  - Star schemas, ETL scripts, Docker-based environment, and LaTeX report.
+- **`SBD` – Securitatea Bazelor de Date**
+  - Projects and reports about security in Oracle and PostgreSQL databases.
