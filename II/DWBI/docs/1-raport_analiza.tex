@@ -38,6 +38,23 @@ Diagrama entitate-relație a bazei de date OLTP este prezentată mai jos:
     \label{fig:er_diagram}
 \end{figure}
 
+Această diagramă prezintă:
+\begin{itemize}
+    \item Toate entitățile
+    \item Relațiile între entități (1:1, 1:M, M:N)
+\end{itemize}
+
+\section{Diagrama Conceptuală Extinsă}
+\label{subsec:conceptual_diagram}
+
+Diagrama conceptuală extinsă a bazei de date OLTP este prezentată Mmai jos:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../schema/TickLy Conceptuală Extinsă.pdf}
+    \caption{Diagrama Conceptuală Extinsă a Bazei de Date OLTP}
+    \label{fig:conceptual_diagram}
+\end{figure}
+
 Baza de date OLTP conține următoarele: 
 
 \subsubsection{Entități independente}
@@ -84,24 +101,6 @@ Sistemul conține următoarele relații many-to-many (M:N), implementate prin ta
     \item \textbf{Ticket $\leftrightarrow$ Tag} (prin \texttt{TICKET\_TAG}) - un ticket poate avea mai multe tag-uri, iar un tag poate fi asociat cu mai multe tichete
     \item \textbf{Ticket $\leftrightarrow$ Client} (prin \texttt{COMMENT\_CLIENT}) - un ticket poate avea mai multe comentarii de la client, iar un client poate avea mai multe comentarii la tichete
     \item \textbf{Ticket $\leftrightarrow$ Agent} (prin \texttt{COMMENT\_AGENT}) - un ticket poate avea mai multe comentarii de la agent, iar un agent poate avea mai multe comentarii la tichete
-\end{itemize}
-
-\section{Diagrama Conceptuală Extinsă}
-\label{subsec:conceptual_diagram}
-
-Diagrama conceptuală extinsă a bazei de date OLTP este prezentată Mmai jos:
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\textwidth]{../schema/TickLy Conceptuală Extinsă.pdf}
-    \caption{Diagrama Conceptuală Extinsă a Bazei de Date OLTP}
-    \label{fig:conceptual_diagram}
-\end{figure}
-
-Această diagramă prezintă:
-\begin{itemize}
-    \item Toate entitățile și atributele acestora
-    \item Relațiile între entități (1:1, 1:M, M:N)
-    \item Cheile primare/străine
 \end{itemize}
 
 \chapter{Diagrama Stea/Fulg a Bazei de Date Depozit}
