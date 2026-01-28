@@ -1,0 +1,464 @@
+Crearea un tabel de mesaje cu următoarea structură:
+
+
+CREATE TABLE MESAJE (
+    cod_mesaj NUMBER PRIMARY KEY,
+    mesaj VARCHAR2(255),
+    tip_mesaj VARCHAR2(1) CHECK (tip_mesaj IN ('E', 'W', 'I')),
+    creat_de VARCHAR2(40) NOT NULL,
+    creat_la DATE NOT NULL
+);
+
+-- Creare secvență pentru cod_mesaj
+CREATE SEQUENCE seq_mesaje START WITH 1 INCREMENT BY 1;
+
+-- Comentarii pentru documentare
+COMMENT ON TABLE MESAJE IS 'Tabel pentru stocarea mesajelor sistemului';
+COMMENT ON COLUMN MESAJE.cod_mesaj IS 'Cheie primară';
+COMMENT ON COLUMN MESAJE.mesaj IS 'Conținutul mesajului';
+COMMENT ON COLUMN MESAJE.tip_mesaj IS 'Valori valide: E - Eroare, W - Avertisment, I - Informație';
+COMMENT ON COLUMN MESAJE.creat_de IS 'Utilizatorul care a creat mesajul';
+COMMENT ON COLUMN MESAJE.creat_la IS 'Data și ora creării mesajului';
+
+
+
+subprogram stocat independent (inclusiv apelare) care să utilizeze toate cele 3 tipuri de
+colecții învăţate;
+
+CREATE OR REPLACE PROCEDURE gestionare_pacienti AS
+    -- Tablou indexat
+    TYPE t_pacienti IS TABLE OF Pacient%ROWTYPE INDEX BY PLS_INTEGER;
+    v_pacienti t_pacienti;
+
+    -- Tablou imbricat
+    TYPE t_nume IS TABLE OF VARCHAR2(100);
+    v_nume t_nume := t_nume();
+
+    -- Vector
+    TYPE v_cnp IS VARRAY(5) OF VARCHAR2(13);
+    v_cnp_uri v_cnp := v_cnp();
+
+    -- Pentru logging
+    v_mesaj VARCHAR2(255);
+BEGIN
+    -- Populare tablou indexat
+    SELECT * BULK COLLECT INTO v_pacienti
+    FROM Pacient
+    WHERE ROWNUM <= 5;
+
+    -- Populare tablou imbricat
+    FOR i IN 1..v_pacienti.COUNT LOOP
+        v_nume.EXTEND;
+        v_nume(i) := v_pacienti(i).nume || ' ' || v_pacienti(i).prenume;
+    END LOOP;
+
+    -- Populare vector
+    v_cnp_uri.EXTEND(3);
+    FOR i IN 1..3 LOOP
+        v_cnp_uri(i) := v_pacienti(i).cnp;
+    END LOOP;
+
+    -- Afișare rezultate
+    FOR i IN 1..v_nume.COUNT LOOP
+        DBMS_OUTPUT.PUT_LINE('Pacient ' || i || ': ' || v_nume(i));
+    END LOOP;
+
+    -- Logging succes
+    v_mesaj := 'Procedura gestionare_pacienti executată cu succes';
+    INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+    VALUES (seq_mesaje.NEXTVAL, v_mesaj, 'I', USER, SYSDATE);
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Logging eroare
+        v_mesaj := 'Eroare în procedura gestionare_pacienti: ' || SQLERRM;
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, v_mesaj, 'E', USER, SYSDATE);
+        RAISE;
+END;
+/
+
+-- Apelare
+BEGIN
+    gestionare_pacienti;
+END;
+/
+
+subprogram stocat independent (inclusiv apelare) care să utilizeze 2 tipuri de cursoare
+învățate, unul dintre acestea fiind cursor parametrizat, dependent de celălalt curso
+
+CREATE OR REPLACE PROCEDURE vizualizare_departamente_medici AS
+    -- Primul cursor - pentru departamente
+    CURSOR c_departamente IS
+        SELECT id, NumeDepartament
+        FROM Departament;
+
+    -- Al doilea cursor - parametrizat, pentru medicii din departament
+    CURSOR c_medici (p_id_departament NUMBER) IS
+        SELECT Nume, Prenume, GradProfesional
+        FROM Medic
+        WHERE IDDepartament = p_id_departament;
+
+    v_mesaj VARCHAR2(255);
+BEGIN
+    -- Pentru fiecare departament
+    FOR dep IN c_departamente LOOP
+        DBMS_OUTPUT.PUT_LINE('Departament: ' || dep.NumeDepartament);
+
+        -- Pentru fiecare medic din departamentul curent
+        FOR med IN c_medici(dep.id) LOOP
+            DBMS_OUTPUT.PUT_LINE('   - ' || med.Nume || ' ' || med.Prenume ||
+                                ' (' || med.GradProfesional || ')');
+        END LOOP;
+
+        DBMS_OUTPUT.PUT_LINE('-------------------');
+    END LOOP;
+
+    -- Logging succes
+    v_mesaj := 'Procedura vizualizare_departamente_medici executată cu succes';
+    INSERT INTO MESAJE
+    VALUES (seq_mesaje.NEXTVAL, v_mesaj, 'I', USER, SYSDATE);
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Logging eroare
+        v_mesaj := 'Eroare în procedura vizualizare_departamente_medici: ' || SQLERRM;
+        INSERT INTO MESAJE
+        VALUES (seq_mesaje.NEXTVAL, v_mesaj, 'E', USER, SYSDATE);
+        RAISE;
+END;
+/
+
+-- Apelare
+BEGIN
+    vizualizare_departamente_medici;
+END;
+/
+
+subprogram stocat independent de tip funcție care să utilizeze într-o singură comandă
+SQL 3 dintre tabelele definite; tratarea tuturor excepțiilor care pot apărea (defin
+minim 2 excepții proprii, altele decât cele predefinite la nivel de sistem); apelare
+subprogramului astfel încât să fie evidențiate toate cazurile definite și tratate
+
+CREATE OR REPLACE FUNCTION calculeaza_programari_medic(
+    p_id_medic NUMBER
+) RETURN NUMBER IS
+    v_numar_programari NUMBER := 0;
+    v_exista_medic NUMBER;
+
+    -- Definire excepții
+    e_medic_inexistent EXCEPTION;
+    e_prea_multe_programari EXCEPTION;
+BEGIN
+    -- Verifică dacă medicul există
+    SELECT COUNT(*) INTO v_exista_medic
+    FROM Medic
+    WHERE ID = p_id_medic;
+
+    IF v_exista_medic = 0 THEN
+        -- Logging și raise pentru medic inexistent
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Medicul nu există', 'E', USER, SYSDATE);
+        RAISE e_medic_inexistent;
+    END IF;
+
+    -- Numără programările medicului
+    SELECT COUNT(*) INTO v_numar_programari
+    FROM Programare
+    WHERE IDMedic = p_id_medic
+    AND DataProgramare >= SYSDATE - 30;
+
+    IF v_numar_programari > 100 THEN
+        -- Logging și raise pentru prea multe programări
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Prea multe programări', 'W', USER, SYSDATE);
+        RAISE e_prea_multe_programari;
+    END IF;
+
+    -- Logging succes
+    INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+    VALUES (seq_mesaje.NEXTVAL, 'Calcul reușit', 'I', USER, SYSDATE);
+
+    RETURN v_numar_programari;
+
+EXCEPTION
+    WHEN e_medic_inexistent THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Medicul nu există în baza de date');
+    WHEN e_prea_multe_programari THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Prea multe programări');
+    WHEN OTHERS THEN
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Eroare neașteptată', 'E', USER, SYSDATE);
+        RAISE;
+END;
+/
+
+-- Apelare pentru testare
+DECLARE
+    v_rezultat NUMBER;
+BEGIN
+    v_rezultat := calculeaza_programari_medic(1);
+    DBMS_OUTPUT.PUT_LINE('Număr programări: ' || v_rezultat);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Eroare: ' || SQLERRM);
+END;
+/
+
+Trigger de tip LMD la nivel de comandă (inclusiv declanșare);
+
+CREATE OR REPLACE TRIGGER trg_verificare_programari
+BEFORE INSERT OR UPDATE ON Programare
+BEGIN
+    -- Verifică dacă se încearcă programări în weekend
+    IF TO_CHAR(SYSDATE, 'DY') IN ('SAT', 'SUN') THEN
+        -- Logging avertisment
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL,
+                'Nu se pot face programări în weekend',
+                'W',
+                USER,
+                SYSDATE);
+
+        RAISE_APPLICATION_ERROR(-20003, 'Nu se pot face programări în weekend');
+    END IF;
+
+    -- Logging succes
+    INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+    VALUES (seq_mesaje.NEXTVAL,
+            'Verificare programări efectuată cu succes',
+            'I',
+            USER,
+            SYSDATE);
+END;
+/
+
+-- Test trigger
+BEGIN
+    -- Încercare de inserare programare
+    INSERT INTO Programare (ID, IDPacient, IDMedic, DataProgramare)
+    VALUES (SEQ_PROGRAMARE_ID.NEXTVAL, 1, 1, SYSDATE);
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Eroare: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+Trigger de tip LMD la nivel de linie (inclusiv declanșare);
+
+CREATE OR REPLACE TRIGGER trg_verificare_medic
+BEFORE INSERT OR UPDATE ON Medic
+FOR EACH ROW
+BEGIN
+    -- Verifică dacă gradul profesional este valid
+    IF :NEW.GradProfesional NOT IN ('Rezident', 'Specialist', 'Primar') THEN
+        -- Logging eroare
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (
+            seq_mesaje.NEXTVAL,
+            'Grad profesional invalid: ' || :NEW.GradProfesional,
+            'E',
+            USER,
+            SYSDATE
+        );
+
+        RAISE_APPLICATION_ERROR(-20004, 'Grad profesional invalid');
+    END IF;
+
+    -- Logging modificare
+    INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+    VALUES (
+        seq_mesaje.NEXTVAL,
+        'Modificare medic: ' || :NEW.Nume,
+        'I',
+        USER,
+        SYSDATE
+    );
+END;
+/
+
+-- Test trigger
+BEGIN
+    -- Încercare de inserare medic cu grad invalid
+    INSERT INTO Medic (ID, Nume, Prenume, GradProfesional, IDDepartament)
+    VALUES (SEQ_MEDIC_ID.NEXTVAL, 'Test', 'Test', 'Invalid', 1);
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Eroare: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+Trigger de tip LDD (inclusiv declanșare).
+
+CREATE OR REPLACE TRIGGER trg_monitorizare_schema
+AFTER DDL ON SCHEMA
+BEGIN
+    -- Logging modificare structură
+    INSERT INTO MESAJE (
+        cod_mesaj,
+        mesaj,
+        tip_mesaj,
+        creat_de,
+        creat_la
+    )
+    VALUES (
+        seq_mesaje.NEXTVAL,
+        'Operație DDL executată: ' || ora_sysevent,
+        'I',
+        user,
+        SYSDATE
+    );
+END;
+/
+
+-- Test trigger
+CREATE TABLE test_table (
+    id NUMBER PRIMARY KEY,
+    nume VARCHAR2(100)
+);
+
+DROP TABLE test_table;
+
+Pachet care să conțină toate obiectele definite în cadrul punctului 9 (inclusiv apelare
+lor). Triggeri-i vor i declanșați de instrucțiuni din subprogramele încapsulate în pachet
+
+CREATE OR REPLACE PACKAGE management_spital AS
+    -- Excepții
+    e_medic_inexistent EXCEPTION;
+    e_prea_multe_programari EXCEPTION;
+    
+    -- Procedura cu colecții
+    PROCEDURE gestionare_pacienti;
+    
+    -- Procedura cu cursoare
+    PROCEDURE vizualizare_departamente_medici;
+    
+    -- Funcția cu 3 tabele
+    FUNCTION calculeaza_programari_medic(p_id_medic NUMBER) RETURN NUMBER;
+    
+    -- Proceduri pentru testarea trigger-urilor
+    PROCEDURE test_inserare_programare(
+        p_id_pacient NUMBER,
+        p_id_medic NUMBER,
+        p_data DATE
+    );
+    
+    PROCEDURE test_inserare_medic(
+        p_nume VARCHAR2,
+        p_prenume VARCHAR2,
+        p_grad VARCHAR2,
+        p_id_dept NUMBER
+    );
+END management_spital;
+/
+
+CREATE OR REPLACE PACKAGE BODY management_spital AS
+    -- Implementare procedură cu colecții
+    PROCEDURE gestionare_pacienti IS
+        TYPE t_pacienti IS TABLE OF Pacient%ROWTYPE INDEX BY PLS_INTEGER;
+        v_pacienti t_pacienti;
+    BEGIN
+        SELECT * BULK COLLECT INTO v_pacienti 
+        FROM Pacient 
+        WHERE ROWNUM <= 5;
+        
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Gestionare pacienți executată', 'I', USER, SYSDATE);
+    END gestionare_pacienti;
+    
+    -- Implementare procedură cu cursoare
+    PROCEDURE vizualizare_departamente_medici IS
+        CURSOR c_departamente IS 
+            SELECT id, NumeDepartament FROM Departament;
+            
+        CURSOR c_medici (p_id_dept NUMBER) IS 
+            SELECT Nume, Prenume FROM Medic WHERE IDDepartament = p_id_dept;
+    BEGIN
+        FOR dep IN c_departamente LOOP
+            FOR med IN c_medici(dep.id) LOOP
+                NULL; -- Aici doar pentru demonstrație
+            END LOOP;
+        END LOOP;
+        
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Vizualizare departamente executată', 'I', USER, SYSDATE);
+    END vizualizare_departamente_medici;
+    
+    -- Implementare funcție
+    FUNCTION calculeaza_programari_medic(p_id_medic NUMBER) RETURN NUMBER IS
+        v_numar_programari NUMBER := 0;
+        v_exista_medic NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v_exista_medic FROM Medic WHERE ID = p_id_medic;
+        
+        IF v_exista_medic = 0 THEN
+            RAISE e_medic_inexistent;
+        END IF;
+        
+        SELECT COUNT(*) INTO v_numar_programari
+        FROM Programare
+        WHERE IDMedic = p_id_medic;
+        
+        RETURN v_numar_programari;
+    END calculeaza_programari_medic;
+    
+    -- Implementare procedură test programare
+    PROCEDURE test_inserare_programare(
+        p_id_pacient NUMBER,
+        p_id_medic NUMBER,
+        p_data DATE
+    ) IS
+    BEGIN
+        INSERT INTO Programare (ID, IDPacient, IDMedic, DataProgramare)
+        VALUES (SEQ_PROGRAMARE_ID.NEXTVAL, p_id_pacient, p_id_medic, p_data);
+        
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Programare inserată', 'I', USER, SYSDATE);
+    END test_inserare_programare;
+    
+    -- Implementare procedură test medic
+    PROCEDURE test_inserare_medic(
+        p_nume VARCHAR2,
+        p_prenume VARCHAR2,
+        p_grad VARCHAR2,
+        p_id_dept NUMBER
+    ) IS
+    BEGIN
+        INSERT INTO Medic (ID, Nume, Prenume, GradProfesional, IDDepartament)
+        VALUES (SEQ_MEDIC_ID.NEXTVAL, p_nume, p_prenume, p_grad, p_id_dept);
+        
+        INSERT INTO MESAJE (cod_mesaj, mesaj, tip_mesaj, creat_de, creat_la)
+        VALUES (seq_mesaje.NEXTVAL, 'Medic inserat', 'I', USER, SYSDATE);
+    END test_inserare_medic;
+    
+END management_spital;
+/
+
+-- Test pachet
+BEGIN
+    -- Test procedură cu colecții
+    management_spital.gestionare_pacienti;
+    
+    -- Test procedură cu cursoare
+    management_spital.vizualizare_departamente_medici;
+    
+    -- Test funcție
+    DBMS_OUTPUT.PUT_LINE('Număr programări: ' || 
+        management_spital.calculeaza_programari_medic(1));
+    
+    -- Test inserare programare
+    management_spital.test_inserare_programare(1, 1, SYSDATE);
+    
+    -- Test inserare medic
+    management_spital.test_inserare_medic('Test', 'Test', 'Specialist', 1);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Eroare: ' || SQLERRM);
+END;
+/

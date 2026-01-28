@@ -1,0 +1,427 @@
+# 📊 Interogări SQL CareConnect
+
+1. **Interogare care analizează performanța medicilor și departamentelor, combinând date despre consultații, pacienți și rețete. Folosește CTE-uri multiple, JOIN-uri (INNER, LEFT), funcții de agregare (COUNT, AVG, SUM), funcții analitice (RANK, DENSE_RANK), funcții pentru date (MONTHS_BETWEEN), CASE, subinterogări și GROUP BY/HAVING pentru a genera un raport comprehensiv despre activitatea medicală.**
+
+WITH DepartamentStats AS (
+    SELECT
+        d.NumeDepartament,
+        COUNT(DISTINCT m.ID) AS NumarMedici,
+        COUNT(DISTINCT p.ID) AS NumarProgramari,
+        SUM(d.BugetAlocat) AS BugetTotal,
+        AVG(c.Urgenta) AS UrgentaMedie
+    FROM DEPARTAMENT d
+    LEFT JOIN MEDIC m ON d.ID = m.IDDepartament
+    LEFT JOIN PROGRAMARE p ON m.ID = p.IDMedic
+    LEFT JOIN CONSULTATIE c ON p.ID = c.IDProgramare
+    GROUP BY d.NumeDepartament
+)
+SELECT
+    ds.*,
+    RANK() OVER (ORDER BY NumarProgramari DESC) AS RankActivitate,
+    CASE
+        WHEN BugetTotal > 500000 THEN 'Buget Mare'
+        WHEN BugetTotal > 200000 THEN 'Buget Mediu'
+        ELSE 'Buget Mic'
+    END AS CategorieBuget
+FROM DepartamentStats ds
+ORDER BY NumarProgramari DESC;
+
+2. **Interogare care generează un raport despre pacienți, incluzând vârsta, alergiile și istoricul consultațiilor. Utilizează funcții de date (MONTHS_BETWEEN), funcții de agregare (COUNT), LISTAGG pentru concatenarea alergiilor, JOIN-uri multiple (LEFT JOIN) și GROUP BY cu HAVING pentru filtrarea pacienților cu minimum 3 programări. Oferă o vedere de ansamblu asupra pacienților frecvenți și stării lor medicale.**
+
+SELECT 
+    m.Nume || ' ' || m.Prenume AS NumeComplet,
+    LISTAGG(s.Denumire, ', ') WITHIN GROUP (ORDER BY s.Denumire) AS Specializari,
+    COUNT(DISTINCT p.IDProgramare) AS NumarProgramari,
+    TO_CHAR(MIN(m.DataAngajare), 'DD-MON-YYYY') AS DataAngajare,
+    MONTHS_BETWEEN(SYSDATE, m.DataAngajare)/12 AS AniVechime
+FROM MEDIC m
+LEFT JOIN MEDIC_SPECIALIZARE ms ON m.ID = ms.IDMedic
+LEFT JOIN SPECIALIZARE s ON ms.IDSpecializare = s.ID
+LEFT JOIN PROGRAMARE p ON m.ID = p.IDMedic
+GROUP BY m.ID, m.Nume, m.Prenume, m.DataAngajare
+HAVING COUNT(DISTINCT s.ID) >= 2
+ORDER BY AniVechime DESC;
+
+3. **Interogare care analizează statisticile despre medicamente și modul în care sunt prescrise, incluzând numărul de prescrieri, cantitățile și durata medie a tratamentelor. Folosește CTE pentru organizarea datelor, JOIN-uri multiple pentru conectarea informațiilor despre rețete și consultații, funcții de agregare (COUNT, SUM, AVG) pentru statistici, și funcții analitice (DENSE_RANK) pentru clasificarea popularității medicamentelor. Rezultatele sunt ordonate după numărul de prescrieri, oferind o vedere de ansamblu asupra utilizării medicamentelor în clinică.**
+
+SELECT p.Nume, p.Prenume
+FROM PACIENT p
+WHERE NOT EXISTS (
+    SELECT a.ID
+    FROM ALERGIE a
+    WHERE a.TipAlergie = 'Alimentară'
+    AND NOT EXISTS (
+        SELECT 1
+        FROM PACIENT_ALERGIE pa
+        WHERE pa.IDPacient = p.ID
+        AND pa.IDAlergie = a.ID
+    )
+);
+
+4. **Interogare care analizează programările medicale pe zile și ore, calculând rata de prezență a pacienților și urgența medie. Folosește funcții de dată (TO_CHAR), agregare (COUNT, AVG), JOIN-uri multiple, GROUP BY cu HAVING, și CASE pentru ordonarea zilelor săptămânii. Include filtrare temporală (ADD_MONTHS) și calculează statistici despre medici și departamente implicate în programări.**
+
+SELECT 
+    TO_CHAR(DataProgramare, 'DY') AS ZiSaptamana,
+    CASE 
+        WHEN TO_NUMBER(SUBSTR(OraProgramare, 1, 2)) BETWEEN 8 AND 12 THEN 'Dimineața'
+        WHEN TO_NUMBER(SUBSTR(OraProgramare, 1, 2)) BETWEEN 13 AND 16 THEN 'După-amiază'
+        ELSE 'Seara'
+    END AS IntervalOrar,
+    COUNT(*) AS NumarProgramari,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS ProcentDinTotal
+FROM PROGRAMARE
+GROUP BY 
+    TO_CHAR(DataProgramare, 'DY'),
+    CASE 
+        WHEN TO_NUMBER(SUBSTR(OraProgramare, 1, 2)) BETWEEN 8 AND 12 THEN 'Dimineața'
+        WHEN TO_NUMBER(SUBSTR(OraProgramare, 1, 2)) BETWEEN 13 AND 16 THEN 'După-amiază'
+        ELSE 'Seara'
+    END;
+
+5. **Interogarea analizează eficiența departamentelor prin măsurarea ratei de finalizare a programărilor, costurilor per consultație și rețetă, folosind un CTE pentru agregarea datelor inițiale. Utilizează JOIN-uri multiple, funcții de agregare (COUNT, SUM), calcule procentuale, RANK pentru clasificare și NULLIF pentru evitarea împărțirii la zero. Rezultatul oferă o vedere de ansamblu asupra performanței fiecărui departament, ordonată după rata de finalizare.**
+
+WITH MediciDepartament AS (
+    SELECT 
+        d.NumeDepartament,
+        d.BugetAlocat,
+        m.Nume || ' ' || m.Prenume AS NumeMedic,
+        m.GradProfesional,
+        COUNT(p.IDProgramare) AS NumarProgramari,
+        ROW_NUMBER() OVER (PARTITION BY d.ID ORDER BY COUNT(p.IDProgramare) DESC) AS RankInDepartament
+    FROM DEPARTAMENT d
+    LEFT JOIN MEDIC m ON d.ID = m.IDDepartament
+    LEFT JOIN PROGRAMARE p ON m.ID = p.IDMedic
+    GROUP BY d.NumeDepartament, d.BugetAlocat, m.Nume, m.Prenume, m.GradProfesional, d.ID
+)
+SELECT 
+    NumeDepartament,
+    BugetAlocat,
+    LISTAGG(NumeMedic || ' (' || GradProfesional || ')', '; ') 
+    WITHIN GROUP (ORDER BY RankInDepartament) AS MediciOrdonatiDupaProgramari
+FROM MediciDepartament
+GROUP BY NumeDepartament, BugetAlocat
+ORDER BY BugetAlocat DESC;
+
+6. **Interogare care identifică medicii care au toate specializările relevante pentru departamentul lor (folosind operatorul DIVISION prin NOT EXISTS). Utilizează JOIN-uri pentru conectarea tabelelor MEDIC, DEPARTAMENT și SPECIALIZARE, și subinterogări pentru a verifica dacă medicul are toate specializările necesare departamentului său. Demonstrează utilizarea operatorului DIVISION, JOIN-uri multiple și subinterogări în WHERE.**
+
+WITH RetetaCosturi AS (
+    SELECT 
+        d.NumeDepartament,
+        r.IDReteta,
+        SUM(rm.Cantitate * m.PretUnitar) AS CostTotal,
+        COUNT(DISTINCT m.ID) AS NumarMedicamente
+    FROM DEPARTAMENT d
+    JOIN MEDIC med ON d.ID = med.IDDepartament
+    JOIN PROGRAMARE p ON med.ID = p.IDMedic
+    JOIN CONSULTATIE c ON p.IDProgramare = c.IDProgramare
+    JOIN RETETA r ON c.ID = r.IDConsultatie
+    JOIN RETETA_MEDICAMENT rm ON r.IDReteta = rm.IDReteta
+    JOIN MEDICAMENT m ON rm.IDMedicament = m.ID
+    GROUP BY d.NumeDepartament, r.IDReteta
+)
+SELECT 
+    NumeDepartament,
+    COUNT(IDReteta) AS NumarRetete,
+    ROUND(AVG(CostTotal), 2) AS CostMediuReteta,
+    MAX(CostTotal) AS CostMaximReteta,
+    ROUND(AVG(NumarMedicamente), 1) AS MedieMedicamentePerReteta,
+    SUM(CostTotal) AS CostTotalDepartament
+FROM RetetaCosturi
+GROUP BY NumeDepartament
+HAVING AVG(CostTotal) > (
+    SELECT AVG(CostTotal) FROM RetetaCosturi
+)
+ORDER BY CostTotalDepartament DESC;
+
+7. **Interogare care analizează medicamentele prescrise, calculând statistici despre frecvența prescrierii, costurile asociate și stocuri. Utilizează GROUP BY și HAVING pentru agregare, DECODE și CASE pentru categorizare, JOIN-uri multiple pentru conectarea informațiilor despre rețete și medicamente, funcții de agregare (COUNT, SUM, AVG) și DENSE_RANK pentru clasificarea popularității medicamentelor.**
+
+SELECT
+    p.Nume || ' ' || p.Prenume AS NumePacient,
+    TO_CHAR(p.DataNasterii, 'YYYY-MM-DD') AS DataNastere,
+    NVL(LISTAGG(DISTINCT a.Denumire, ', ') WITHIN GROUP (ORDER BY a.Denumire), 'Fără alergii') AS ListaAlergii,
+    COUNT(DISTINCT c.ID) AS NumarConsultatii,
+    MAX(c.DataConsultatie) AS UltimaConsultatie,
+    CASE
+        WHEN COUNT(DISTINCT c.ID) = 0 THEN 'Fără consultații'
+        WHEN MAX(c.DataConsultatie) < ADD_MONTHS(SYSDATE, -6) THEN 'Inactiv'
+        ELSE 'Activ'
+    END AS StatusPacient
+FROM PACIENT p
+LEFT JOIN PACIENT_ALERGIE pa ON p.ID = pa.IDPacient
+LEFT JOIN ALERGIE a ON pa.IDAlergie = a.ID
+LEFT JOIN PROGRAMARE pr ON p.ID = pr.IDPacient
+LEFT JOIN CONSULTATIE c ON pr.ID = c.IDProgramare
+GROUP BY p.ID, p.Nume, p.Prenume, p.DataNasterii
+HAVING COUNT(DISTINCT a.ID) >= 2 OR COUNT(DISTINCT c.ID) >= 3
+ORDER BY COUNT(DISTINCT c.ID) DESC;
+
+8. **Interogare care identifică medicii și specializările lor, împreună cu numărul de consultații și programări. Utilizează JOIN-uri multiple pentru a conecta tabelele MEDIC, SPECIALIZARE și DEPARTAMENT, funcții de agregare (COUNT), GROUP BY pentru gruparea rezultatelor, și ORDER BY pentru sortare. Include și funcții pentru manipularea șirurilor de caractere (concatenare) și CASE pentru categorizarea medicilor după experiență.**
+
+SELECT
+    m.Denumire AS NumeMedicament,
+    m.FormaFarmaceutica,
+    COUNT(DISTINCT r.ID) AS NumarRetete,
+    SUM(rm.Cantitate) AS CantitateaTotala,
+    ROUND(AVG(rm.DurataTratament), 1) AS DurataMedieTratament,
+    DECODE(m.NecesitaReteta, 1, 'Da', 'Nu') AS NecesitaReteta,
+    CASE
+        WHEN m.StocDisponibil = 0 THEN 'Stoc epuizat'
+        WHEN m.StocDisponibil < 10 THEN 'Stoc critic'
+        WHEN m.StocDisponibil < 50 THEN 'Stoc redus'
+        ELSE 'Stoc suficient'
+    END AS StatusStoc,
+    DENSE_RANK() OVER (ORDER BY COUNT(DISTINCT r.ID) DESC) AS RankPopularitate
+FROM MEDICAMENT m
+LEFT JOIN RETETA_MEDICAMENT rm ON m.ID = rm.IDMedicament
+LEFT JOIN RETETA r ON rm.IDReteta = r.ID
+WHERE UPPER(m.SubstantaActiva) NOT LIKE '%PENICILINA%'
+GROUP BY
+    m.Denumire,
+    m.FormaFarmaceutica,
+    m.NecesitaReteta,
+    m.StocDisponibil
+HAVING COUNT(DISTINCT r.ID) > 0
+ORDER BY NumarRetete DESC;
+
+9. **Interogare care identifică medicii care au toate specializările relevante pentru departamentul lor, folosind operatorul DIVISION (implementat prin NOT EXISTS). Utilizează JOIN-uri multiple pentru a conecta tabelele MEDIC, DEPARTAMENT și SPECIALIZARE, și folosește LIKE pentru a verifica corespondența între numele departamentului și specializări. Exemplifică utilizarea subinterogărilor în WHERE și operații pe mulțimi.**
+
+WITH IntervaleOrare AS (
+    SELECT 
+        m.ID AS IDMedic,
+        m.Nume || ' ' || m.Prenume AS NumeMedic,
+        TO_CHAR(p.DataProgramare, 'DY') AS Zi,
+        CASE 
+            WHEN SUBSTR(p.OraProgramare, 1, 2) BETWEEN '08' AND '12' THEN 'Dimineața'
+            WHEN SUBSTR(p.OraProgramare, 1, 2) BETWEEN '13' AND '16' THEN 'După-amiază'
+            ELSE 'Seara'
+        END AS IntervalOrar,
+        COUNT(*) AS NumarProgramari
+    FROM MEDIC m
+    JOIN PROGRAMARE p ON m.ID = p.IDMedic
+    WHERE p.DataProgramare BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + 30
+    GROUP BY 
+        m.ID, 
+        m.Nume, 
+        m.Prenume, 
+        TO_CHAR(p.DataProgramare, 'DY'),
+        CASE 
+            WHEN SUBSTR(p.OraProgramare, 1, 2) BETWEEN '08' AND '12' THEN 'Dimineața'
+            WHEN SUBSTR(p.OraProgramare, 1, 2) BETWEEN '13' AND '16' THEN 'După-amiază'
+            ELSE 'Seara'
+        END
+)
+SELECT 
+    NumeMedic,
+    Zi,
+    MAX(DECODE(IntervalOrar, 'Dimineața', NumarProgramari, 0)) AS Dimineata,
+    MAX(DECODE(IntervalOrar, 'După-amiază', NumarProgramari, 0)) AS DupaAmiaza,
+    MAX(DECODE(IntervalOrar, 'Seara', NumarProgramari, 0)) AS Seara,
+    SUM(NumarProgramari) AS TotalPeZi
+FROM IntervaleOrare
+GROUP BY NumeMedic, Zi
+ORDER BY 
+    CASE Zi 
+        WHEN 'MON' THEN 1 
+        WHEN 'TUE' THEN 2 
+        WHEN 'WED' THEN 3 
+        WHEN 'THU' THEN 4 
+        WHEN 'FRI' THEN 5 
+        WHEN 'SAT' THEN 6 
+        WHEN 'SUN' THEN 7 
+    END,
+    NumeMedic;
+
+10. **Interogare care identifică medicii și specializările lor, folosind LISTAGG pentru concatenarea specializărilor și LEFT JOIN pentru a include toți medicii. Utilizează funcții de agregare (COUNT), GROUP BY pentru grupare pe medici, și ORDER BY pentru ordonarea rezultatelor după numărul de specializări. Oferă o vedere de ansamblu asupra pregătirii profesionale a medicilor din fiecare departament.**
+
+WITH ConsultatiiDepartamente AS (
+    SELECT
+        d.NumeDepartament,
+        d.BugetAlocat,
+        COUNT(DISTINCT m.ID) AS NumarMedici,
+        COUNT(DISTINCT c.ID) AS NumarConsultatii,
+        COUNT(DISTINCT r.ID) AS NumarRetete,
+        ROUND(AVG(c.Urgenta), 2) AS UrgentaMedie,
+        COUNT(DISTINCT CASE WHEN c.Urgenta >= 4 THEN c.ID END) AS ConsultatiiUrgente
+    FROM DEPARTAMENT d
+    LEFT JOIN MEDIC m ON d.ID = m.IDDepartament
+    LEFT JOIN PROGRAMARE p ON m.ID = p.IDMedic
+    LEFT JOIN CONSULTATIE c ON p.ID = c.IDProgramare
+    LEFT JOIN RETETA r ON c.ID = r.IDConsultatie
+    WHERE c.DataConsultatie >= ADD_MONTHS(SYSDATE, -3)
+    GROUP BY d.NumeDepartament, d.BugetAlocat
+)
+SELECT
+    cd.NumeDepartament,
+    cd.NumarMedici,
+    cd.NumarConsultatii,
+    cd.ConsultatiiUrgente,
+    ROUND(cd.ConsultatiiUrgente * 100.0 / NULLIF(cd.NumarConsultatii, 0), 1) AS ProcentUrgente,
+    cd.UrgentaMedie,
+    cd.NumarRetete,
+    ROUND(cd.BugetAlocat / NULLIF(cd.NumarConsultatii, 0), 2) AS CostMediuPerConsultatie,
+    CASE
+        WHEN cd.ConsultatiiUrgente > 10 THEN 'DEPARTAMENT CRITIC'
+        WHEN cd.ConsultatiiUrgente > 5 THEN 'DEPARTAMENT SOLICITAT'
+        ELSE 'DEPARTAMENT STABIL'
+    END AS StatusDepartament,
+    DENSE_RANK() OVER (ORDER BY cd.ConsultatiiUrgente DESC) AS RankUrgente
+FROM ConsultatiiDepartamente cd
+WHERE cd.NumarConsultatii > 0
+ORDER BY cd.ConsultatiiUrgente DESC, cd.NumarConsultatii DESC;
+
+11. **Interogare care identifică medicii și specializările lor, folosind LISTAGG pentru concatenarea specializărilor și LEFT JOIN pentru a include toți medicii. Utilizează funcții de agregare (COUNT), GROUP BY pentru gruparea pe medici, și ORDER BY pentru ordonarea rezultatelor după numărul de specializări. Oferă o vedere de ansamblu asupra pregătirii profesionale a medicilor din sistem.**
+
+WITH StatisticiMedic AS (
+    SELECT
+        m.ID,
+        m.Nume || ' ' || m.Prenume AS NumeMedic,
+        d.NumeDepartament,
+        COUNT(DISTINCT p.ID) AS TotalProgramari,
+        COUNT(DISTINCT c.ID) AS TotalConsultatii,
+        COUNT(DISTINCT r.ID) AS TotalRetete,
+        ROUND(AVG(c.Urgenta), 2) AS MedieUrgenta,
+        COUNT(DISTINCT ms.IDSpecializare) AS NumarSpecializari
+    FROM MEDIC m
+    JOIN DEPARTAMENT d ON m.IDDepartament = d.ID
+    LEFT JOIN PROGRAMARE p ON m.ID = p.IDMedic
+    LEFT JOIN CONSULTATIE c ON p.ID = c.IDProgramare
+    LEFT JOIN RETETA r ON c.ID = r.IDConsultatie
+    LEFT JOIN MEDIC_SPECIALIZARE ms ON m.ID = ms.IDMedic
+    WHERE p.DataProgramare >= ADD_MONTHS(SYSDATE, -6)
+    GROUP BY m.ID, m.Nume, m.Prenume, d.NumeDepartament
+)
+SELECT
+    NumeMedic,
+    NumeDepartament,
+    TotalProgramari,
+    TotalConsultatii,
+    ROUND(TotalConsultatii * 100.0 / NULLIF(TotalProgramari, 0), 1) AS RataFinalizare,
+    TotalRetete,
+    MedieUrgenta,
+    NumarSpecializari,
+    RANK() OVER (PARTITION BY NumeDepartament ORDER BY TotalConsultatii DESC) AS RankInDepartament
+FROM StatisticiMedic
+WHERE TotalProgramari > 0
+ORDER BY TotalConsultatii DESC;
+
+12. **Interogare care analizează distribuția programărilor pe zile ale săptămânii și intervale orare (Dimineața, După-amiază, Seara). Folosește funcții de dată (TO_CHAR), CASE pentru categorizarea intervalelor orare, funcții de agregare (COUNT), calcule procentuale și GROUP BY pentru a genera statistici despre frecvența programărilor. Rezultatele sunt ordonate după ziua săptămânii pentru o vizualizare clară a pattern-urilor de programare.**
+
+WITH PrescrieriMedicament AS (
+    SELECT
+        m.ID,
+        m.Denumire,
+        m.SubstantaActiva,
+        m.FormaFarmaceutica,
+        COUNT(DISTINCT rm.IDReteta) AS NumarPrescrieri,
+        SUM(rm.Cantitate) AS CantitatePrescrisa,
+        AVG(rm.DurataTratament) AS DurataMedieTratament,
+        COUNT(DISTINCT r.IDConsultatie) AS NumarConsultatii,
+        COUNT(DISTINCT p.IDPacient) AS NumarPacienti
+    FROM MEDICAMENT m
+    LEFT JOIN RETETA_MEDICAMENT rm ON m.ID = rm.IDMedicament
+    LEFT JOIN RETETA r ON rm.IDReteta = r.ID
+    LEFT JOIN CONSULTATIE c ON r.IDConsultatie = c.ID
+    LEFT JOIN PROGRAMARE p ON c.IDProgramare = p.ID
+    GROUP BY m.ID, m.Denumire, m.SubstantaActiva, m.FormaFarmaceutica
+)
+SELECT
+    Denumire,
+    SubstantaActiva,
+    FormaFarmaceutica,
+    NumarPrescrieri,
+    CantitatePrescrisa,
+    ROUND(DurataMedieTratament, 1) AS DurataMedieTratament,
+    NumarPacienti,
+    DENSE_RANK() OVER (ORDER BY NumarPrescrieri DESC) AS RankPopularitate
+FROM PrescrieriMedicament
+WHERE NumarPrescrieri > 0
+ORDER BY NumarPrescrieri DESC;
+
+13. **Interogare care analizează programările pe zile și ore, calculând rata de prezență a pacienților și urgența medie. Folosește funcții de dată (TO_CHAR), GROUP BY cu HAVING, funcții de agregare (COUNT, AVG), JOIN-uri multiple și CASE pentru ordonarea zilelor săptămânii. Oferă o perspectivă asupra momentelor cu cel mai mare grad de ocupare și a eficienței programărilor.**
+
+SELECT
+    TO_CHAR(p.DataProgramare, 'DY') AS ZiSaptamana,
+    TO_CHAR(p.DataProgramare, 'HH24:MI') AS Ora,
+    COUNT(*) AS TotalProgramari,
+    COUNT(c.ID) AS ProgramariOnorate,
+    ROUND(COUNT(c.ID) * 100.0 / COUNT(*), 1) AS RataPrezenta,
+    AVG(c.Urgenta) AS UrgentaMedie,
+    COUNT(DISTINCT m.ID) AS NumarMedici,
+    COUNT(DISTINCT d.ID) AS NumarDepartamente
+FROM PROGRAMARE p
+LEFT JOIN CONSULTATIE c ON p.ID = c.IDProgramare
+JOIN MEDIC m ON p.IDMedic = m.ID
+JOIN DEPARTAMENT d ON m.IDDepartament = d.ID
+WHERE p.DataProgramare BETWEEN ADD_MONTHS(SYSDATE, -1) AND SYSDATE
+GROUP BY TO_CHAR(p.DataProgramare, 'DY'), TO_CHAR(p.DataProgramare, 'HH24:MI')
+HAVING COUNT(*) >= 5
+ORDER BY
+    CASE TO_CHAR(p.DataProgramare, 'DY')
+        WHEN 'MON' THEN 1 WHEN 'TUE' THEN 2
+        WHEN 'WED' THEN 3 WHEN 'THU' THEN 4
+        WHEN 'FRI' THEN 5 WHEN 'SAT' THEN 6
+        WHEN 'SUN' THEN 7
+    END,
+    TO_CHAR(p.DataProgramare, 'HH24:MI');
+
+14. **Interogare care calculează statistici despre eficiența fiecărui departament, incluzând numărul de medici, programări, consultații și bugetul alocat. Folosește CTE pentru structurare, JOIN-uri (LEFT JOIN), funcții de agregare (COUNT, SUM, AVG), CASE pentru categorizare, NULLIF pentru evitarea împărțirii la zero, și RANK pentru clasificarea departamentelor după activitate. Rezultatele sunt ordonate după rata de finalizare a consultațiilor.**
+
+WITH EficientaDepartament AS (
+    SELECT
+        d.ID,
+        d.NumeDepartament,
+        d.BugetAlocat,
+        COUNT(DISTINCT m.ID) AS NumarMedici,
+        COUNT(DISTINCT p.ID) AS NumarProgramari,
+        COUNT(DISTINCT c.ID) AS NumarConsultatii,
+        COUNT(DISTINCT r.ID) AS NumarRetete,
+        SUM(rm.Cantitate * med.PretUnitar) AS CostMedicamente
+    FROM DEPARTAMENT d
+    LEFT JOIN MEDIC m ON d.ID = m.IDDepartament
+    LEFT JOIN PROGRAMARE p ON m.ID = p.IDMedic
+    LEFT JOIN CONSULTATIE c ON p.ID = c.IDProgramare
+    LEFT JOIN RETETA r ON c.ID = r.IDConsultatie
+    LEFT JOIN RETETA_MEDICAMENT rm ON r.ID = rm.IDReteta
+    LEFT JOIN MEDICAMENT med ON rm.IDMedicament = med.ID
+    GROUP BY d.ID, d.NumeDepartament, d.BugetAlocat
+)
+SELECT
+    NumeDepartament,
+    NumarMedici,
+    NumarProgramari,
+    NumarConsultatii,
+    ROUND(NumarConsultatii * 100.0 / NULLIF(NumarProgramari, 0), 1) AS RataFinalizare,
+    NumarRetete,
+    ROUND(BugetAlocat / NULLIF(NumarConsultatii, 0), 2) AS CostPerConsultatie,
+    ROUND(CostMedicamente / NULLIF(NumarRetete, 0), 2) AS CostMediuReteta,
+    RANK() OVER (ORDER BY NumarConsultatii DESC) AS RankActivitate,
+    RANK() OVER (ORDER BY (NumarConsultatii * 100.0 / NULLIF(NumarProgramari, 0)) DESC) AS RankEficienta
+FROM EficientaDepartament
+WHERE NumarMedici > 0
+ORDER BY RataFinalizare DESC;
+
+15. **Interogare care afișează structura ierarhică a gradelor profesionale ale medicilor (Primar -> Specialist -> Rezident), folosind START WITH și CONNECT BY. Include și numărul de medici pentru fiecare grad profesional.**
+
+WITH IerarhieMedici AS (
+    SELECT DISTINCT 
+        GradProfesional,
+        CASE 
+            WHEN GradProfesional = 'Primar' THEN NULL
+            WHEN GradProfesional = 'Specialist' THEN 'Primar'
+            WHEN GradProfesional = 'Rezident' THEN 'Specialist'
+        END AS GradSuperior
+    FROM MEDIC
+)
+SELECT 
+    LEVEL as Nivel,
+    LPAD(' ', 2 * (LEVEL - 1)) || GradProfesional as Structura,
+    (
+        SELECT COUNT(*) 
+        FROM MEDIC m 
+        WHERE m.GradProfesional = i.GradProfesional
+    ) as NumarMedici,
+    CONNECT_BY_ISLEAF as EsteFrunza
+FROM IerarhieMedici i
+START WITH GradSuperior IS NULL
+CONNECT BY PRIOR GradProfesional = GradSuperior
+ORDER SIBLINGS BY GradProfesional;
