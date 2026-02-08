@@ -665,3 +665,359 @@ Această cerere va utiliza următorii indecși:
     \item \textbf{BMP\_DIM\_AGENT\_CURRENT}: Pentru a obține versiunea curentă a agenților
 \end{itemize}
 
+
+\chapter{Obiecte de Tip Dimensiune}
+\label{sec:obiecte_dimensiune}
+
+\section{Materialized Views pentru Dimensiuni Agregate}
+
+\subsubsection{MV\_DIM\_CLIENT\_HIERARCHY}
+
+Acest materialized view creează o ierarhie a clienților pe baza tipului și categoriei de tichete create.
+
+\textbf{Scop}: Permite analize pe ierarhii de clienți (ex: clienți persoane fizice vs. juridice, clienți cu multe tichete vs. puține tichete).
+
+\textbf{Structură propusă}:
+\begin{itemize}
+    \item Nivel 1: Tip client (F/J)
+    \item Nivel 2: Categorie de tichete preferată
+    \item Nivel 3: Client individual
+\end{itemize}
+
+\subsubsection{MV\_DIM\_DEPARTAMENT\_PERFORMANCE}
+
+Acest materialized view agregă performanțele departamentelor.
+
+\textbf{Scop}: Permite analize rapide ale performanțelor departamentelor fără a recalcula de fiecare dată metricile.
+
+\textbf{Metrici incluse}:
+\begin{itemize}
+    \item Număr total de tichete
+    \item Timp mediu de rezolvare
+    \item Rating mediu
+    \item Număr de agenți
+\end{itemize}
+
+\section{Dimension Hierarchies}
+
+\subsubsection{Hierarhie Temporală}
+
+Dimensiunea \texttt{DIM\_TIME} conține implicit o ierarhie temporală:
+\begin{itemize}
+    \item \textbf{Nivel 1}: An
+    \item \textbf{Nivel 2}: Trimestru (în cadrul anului)
+    \item \textbf{Nivel 3}: Lună (în cadrul trimestrului)
+    \item \textbf{Nivel 4}: Zi (în cadrul lunii)
+\end{itemize}
+
+Această ierarhie permite drill-down și roll-up în analizele temporale.
+
+\subsubsection{Hierarhie Categorii}
+
+Dimensiunea \texttt{DIM\_CATEGORIE} conține o ierarhie auto-referențială:
+\begin{itemize}
+    \item \textbf{Nivel 1}: Categorie părinte (rădăcină)
+    \item \textbf{Nivel 2}: Subcategorii
+    \item \textbf{Nivel 3}: Sub-subcategorii (dacă există)
+\end{itemize}
+
+Câmpurile \texttt{nivel\_ierarhie} și \texttt{categorie\_completa} permit navigarea eficientă în ierarhie.
+
+\chapter{Partiționarea Tabelelor}
+\label{sec:partitii}
+
+\section{Tabelul FACT\_TICKET - Partiționare pe Range (Date)}
+
+\subsubsection{Justificare}
+
+Tabelul \texttt{FACT\_TICKET} va crește continuu în timp, devenind foarte mare. Partiționarea pe baza datei de creare a ticketului (\texttt{date\_creare\_key}) oferă următoarele avantaje:
+
+\begin{itemize}
+    \item \textbf{Query Performance}: Cererile care filtrează pe perioade specifice vor accesa doar partițiile relevante (partition pruning)
+    \item \textbf{Maintenance}: Părțile vechi ale datelor pot fi arhivate sau șterse ușor (drop partition)
+    \item \textbf{Parallel Operations}: Operațiile de indexare și întreținere pot rula în paralel pe diferite partiții
+    \item \textbf{Backup Selectiv}: Partițiile recente pot fi făcute backup mai frecvent decât cele vechi
+\end{itemize}
+
+\subsubsection{Strategie de Partiționare}
+
+\textbf{Partiționare pe Range} pe \texttt{date\_creare\_key}:
+\begin{itemize}
+    \item \textbf{Partiție lunară}: Fiecare lună va avea o partiție separată
+    \item \textbf{Partiție DEFAULT}: Pentru date viitoare sau date care nu se încadrează în intervalele definite
+\end{itemize}
+
+\textbf{Exemplu de partiții}:
+\begin{itemize}
+    \item \texttt{P\_2024\_01}: Ianuarie 2024 (date\_key: 20240101 - 20240131)
+    \item \texttt{P\_2024\_02}: Februarie 2024 (date\_key: 20240201 - 20240229)
+    \item \texttt{P\_2024\_03}: Martie 2024 (date\_key: 20240301 - 20240331)
+    \item \ldots
+    \item \texttt{P\_DEFAULT}: Toate celelalte date
+\end{itemize}
+
+\subsubsection{Cerere în Limbaj Natural}
+
+\textbf{Cerere}: "Să se calculeze numărul total de tichete create în fiecare lună din anul 2024, grupate pe departamente, pentru tichetele cu prioritate ridicată (nivel 4 sau 5) care au fost rezolvate în mai puțin de 24 de ore."
+
+Această cerere va beneficia de partiționare prin:
+\begin{itemize}
+    \item \textbf{Partition Pruning}: Oracle va accesa doar partițiile pentru lunile din 2024, ignorând toate celelalte partiții
+    \item \textbf{Index Efficiency}: Indecșii locali pe fiecare partiție vor fi mai mici și mai eficienți
+    \item \textbf{Parallel Execution}: Dacă cererea necesită scanarea mai multor partiții, Oracle poate procesa partițiile în paralel
+\end{itemize}
+
+\section{Tabelul DIM\_CLIENT - Partiționare pe Hash (client\_key)}
+
+\subsubsection{Justificare}
+
+Dimensiunea \texttt{DIM\_CLIENT} este o dimensiune Type 2 SCD care poate crește semnificativ datorită istoricizării. Partiționarea pe hash pe \texttt{client\_key} oferă:
+
+\begin{itemize}
+    \item \textbf{Distribuție Uniformă}: Datele sunt distribuite uniform pe partiții, evitând partiții "hot"
+    \item \textbf{Join Performance}: Join-urile cu \texttt{FACT\_TICKET} pot beneficia de partition-wise joins dacă și fact table este partiționat corespunzător
+    \item \textbf{Load Balancing}: Operațiile ETL vor fi distribuite uniform pe partiții
+\end{itemize}
+
+\subsubsection{Strategie de Partiționare}
+
+\textbf{Partiționare pe Hash} pe \texttt{client\_key}:
+\begin{itemize}
+    \item \textbf{Număr de partiții}: 8 sau 16 (în funcție de volumul de date)
+    \item Fiecare partiție va conține aproximativ același număr de înregistrări
+\end{itemize}
+
+\subsubsection{Cerere în Limbaj Natural}
+
+\textbf{Cerere}: "Să se identifice toți clienții care au creat mai mult de 10 tichete în ultimele 6 luni și care au un rating mediu mai mic de 3 stele, afișând detalii despre tipul de client și departamentele cu care au interacționat cel mai des."
+
+Această cerere va beneficia de partiționare prin:
+\begin{itemize}
+    \item \textbf{Parallel Scans}: Oracle poate scana toate partițiile în paralel pentru a identifica clienții care îndeplinesc criteriile
+    \item \textbf{Reduced Contention}: Operațiile pe diferite partiții nu se blochează reciproc
+    \item \textbf{Efficient Aggregation}: Agregările pe partiții pot rula în paralel
+\end{itemize}
+
+\chapter{Cerere SQL Complexă pentru Optimizare}
+\label{sec:cerere_optimizare}
+
+\section{Formularea Cererii în Limbaj Natural}
+
+\textbf{Cerere}: "Să se calculeze pentru fiecare departament, în fiecare trimestru din ultimii 2 ani, următoarele metrici:
+\begin{itemize}
+    \item Numărul total de tichete
+    \item Numărul de tichete rezolvate (cu status final)
+    \item Timpul mediu de rezolvare (în ore)
+    \item Rating-ul mediu primit
+    \item Numărul de tichete cu prioritate ridicată (nivel 4 sau 5)
+    \item Procentul de tichete rezolvate în timpul standard (conform prioritate)
+    \item Top 3 agenți cu cele mai multe tichete rezolvate
+\end{itemize}
+
+Rezultatele trebuie să fie filtrate doar pentru departamentele cu cel puțin 100 de tichete în perioada analizată și să fie sortate descrescător după numărul total de tichete."
+
+\section{Tehnici de Optimizare}
+
+\subsubsection{1. Materialized View cu Query Rewrite}
+
+\textbf{Avantaje}:
+\begin{itemize}
+    \item Rezultatele pre-calculate reduc timpul de execuție de la minute la secunde
+    \item Query rewrite automat - Oracle folosește MV-ul fără modificarea cererii
+    \item Refresh incremental posibil pentru actualizări eficiente
+\end{itemize}
+
+\textbf{Dezavantaje}:
+\begin{itemize}
+    \item Spațiu suplimentar de stocare
+    \item Necesită proces de refresh (complet sau incremental)
+    \item Datele pot fi ușor învechite între refresh-uri
+\end{itemize}
+
+\textbf{Recomandare}: Utilizare pentru rapoarte periodice (zilnice/săptămânale) unde ușoara învechire a datelor este acceptabilă.
+
+\subsubsection{2. Indecși Compuși pe Fact Table}
+
+Crearea de indecși compuși pe \texttt{FACT\_TICKET}:
+\begin{itemize}
+    \item \texttt{(date\_creare\_key, departament\_key, status\_este\_final)}
+    \item \texttt{(departament\_key, prioritate\_nivel, status\_este\_final)}
+\end{itemize}
+
+\textbf{Avantaje}:
+\begin{itemize}
+    \item Acces rapid la datele filtrate
+    \item Reducerea I/O-ului pentru operații de filtrare și agregare
+    \item Suport pentru operații de sortare eficiente
+\end{itemize}
+
+\textbf{Dezavantaje}:
+\begin{itemize}
+    \item Spațiu suplimentar pentru indecși
+    \item Overhead la inserare/actualizare (indecșii trebuie menținuți)
+    \item Risc de creștere excesivă dacă se creează prea mulți indecși
+\end{itemize}
+
+\textbf{Recomandare}: Utilizare pentru coloane frecvent folosite în WHERE și GROUP BY.
+
+\subsubsection{3. Partition Pruning}
+
+Cu partiționarea pe \texttt{date\_creare\_key}, Oracle va accesa doar partițiile relevante pentru ultimii 2 ani.
+
+\textbf{Avantaje}:
+\begin{itemize}
+    \item Reducere dramatică a I/O-ului (doar partițiile relevante sunt scanate)
+    \item Timp de execuție redus proporțional cu numărul de partiții eliminate
+    \item Eficiență crescută pentru analize pe perioade specifice
+\end{itemize}
+
+\textbf{Dezavantaje}:
+\begin{itemize}
+    \item Necesită partiționare corectă a tabelelor
+    \item Overhead de management al partițiilor
+    \item Potențial de partiții neuniforme dacă distribuția datelor este inegală
+\end{itemize}
+
+\textbf{Recomandare}: Utilizare obligatorie pentru tabele mari cu filtrare temporală frecventă.
+
+\subsubsection{4. Bitmap Join Indexes}
+
+Crearea de bitmap join indexes între \texttt{FACT\_TICKET} și dimensiuni:
+\begin{itemize}
+    \item \texttt{FACT\_TICKET.departament\_key} JOIN \texttt{DIM\_DEPARTAMENT.departament\_key}
+    \item \texttt{FACT\_TICKET.date\_creare\_key} JOIN \texttt{DIM\_TIME.date\_key}
+\end{itemize}
+
+\textbf{Avantaje}:
+\begin{itemize}
+    \item Eliminarea join-urilor costisitoare pentru filtrare
+    \item Operații logice pe biți foarte rapide
+    \item Eficiență pentru agregări pe dimensiuni
+\end{itemize}
+
+\textbf{Dezavantaje}:
+\begin{itemize}
+    \item Overhead semnificativ la inserare/actualizare
+    \item Necesită mentenanță atentă
+    \item Potențial de blocare în medii OLTP (dar acceptabil în DW)
+\end{itemize}
+
+\textbf{Recomandare}: Utilizare pentru dimensiuni stabile cu cardinalitate redusă și filtrare frecventă.
+
+\subsubsection{5. Parallel Query Execution}
+
+Folosirea paralelismului pentru procesarea cererii.
+
+\textbf{Avantaje}:
+\begin{itemize}
+    \item Utilizare eficientă a resurselor multi-core
+    \item Reducere a timpului de execuție proporțional cu numărul de procesoare
+    \item Scalabilitate pentru volume mari de date
+\end{itemize}
+
+\textbf{Dezavantaje}:
+\begin{itemize}
+    \item Consum crescut de CPU și memorie
+    \item Potențial de degradare a performanței altor cereri simultane
+    \item Necesită configurare atentă a parametrilor de paralelism
+\end{itemize}
+
+\textbf{Recomandare}: Utilizare pentru cereri complexe pe volume mari de date, în timpuri de utilizare redusă sau pe servere dedicate.
+
+\section{Strategie Recomandată de Optimizare}
+
+Pentru cererea specificată, recomandăm următoarea combinație:
+
+\begin{enumerate}
+    \item \textbf{Partiționare pe Range} pe \texttt{date\_creare\_key} (obligatoriu) - pentru partition pruning
+    \item \textbf{Materialized View} cu refresh zilnic - pentru rapoarte periodice
+    \item \textbf{Indecși compuși} pe coloanele frecvent filtrate - pentru cereri ad-hoc
+    \item \textbf{Bitmap indexes} pe coloanele cu cardinalitate redusă - pentru filtrare rapidă
+    \item \textbf{Parallel execution} cu grad moderat (4-8) - pentru procesare eficientă
+\end{enumerate}
+
+\chapter{Cereri Specifice DW cu Grad de Complexitate Diferit}
+\label{sec:cereri_dw}
+
+\section{Cerere Simplă (Nivel 1)}
+
+\textbf{Descriere}: "Să se afișeze numărul total de tichete create în fiecare lună din anul 2024."
+
+\textbf{Complexitate}: Scăzută - o singură agregare temporală, fără join-uri complexe.
+
+\textbf{Raport propus}: Grafic de tip bar chart sau line chart cu lunile pe axa X și numărul de tichete pe axa Y.
+
+\section{Cerere Medie (Nivel 2)}
+
+\textbf{Descriere}: "Să se calculeze timpul mediu de rezolvare al tichetelor, grupate pe departamente și pe niveluri de prioritate, pentru tichetele create în ultimul trimestru."
+
+\textbf{Complexitate}: Medie - agregări pe multiple dimensiuni, filtrare temporală, join-uri cu dimensiuni.
+
+\textbf{Raport propus}: Heatmap sau tabel pivot cu departamentele pe rânduri, prioritățile pe coloane și timpul mediu de rezolvare ca valoare.
+
+\section{Cerere Medie-Avansată (Nivel 3)}
+
+\textbf{Descriere}: "Să se identifice top 10 agenți cu cel mai bun rating mediu (minim 4.0) care au rezolvat cel puțin 50 de tichete în ultimele 3 luni, afișând pentru fiecare agent: numărul total de tichete rezolvate, rating-ul mediu, timpul mediu de rezolvare și departamentul din care face parte."
+
+\textbf{Complexitate}: Medie-Avansată - filtrare complexă, agregări, sortare, top N, join-uri multiple.
+
+\textbf{Raport propus}: Tabel sortabil cu top 10 agenți, cu posibilitatea de filtrare și export. Grafic de tip bar chart pentru compararea rating-urilor.
+
+\section{Cerere Avansată (Nivel 4)}
+
+\textbf{Descriere}: "Să se analizeze evoluția satisfacției clienților pe categorii de tichete, calculând pentru fiecare categorie și pentru fiecare trimestru din ultimul an: numărul de tichete, rating-ul mediu, procentul de tichete rezolvate în timpul standard și tendința de creștere/scădere a rating-ului comparativ cu trimestrul anterior."
+
+\textbf{Complexitate}: Avansată - analiză temporală complexă, calcul de tendințe, agregări pe multiple niveluri, filtrare pe multiple criterii.
+
+\textbf{Raport propus}: Dashboard cu multiple vizualizări:
+\begin{itemize}
+    \item Line chart pentru evoluția rating-ului pe trimestre
+    \item Stacked bar chart pentru numărul de tichete pe categorii și trimestre
+    \item Tabel cu metrici detaliate și indicatori de tendință (săgeți sus/jos)
+    \item Gauge chart pentru procentul de tichete rezolvate în timpul standard
+\end{itemize}
+
+\section{Cerere Foarte Avansată (Nivel 5)}
+
+\textbf{Descriere}: "Să se realizeze o analiză predictivă a volumului de tichete pentru următoarele 6 luni, pe baza tendințelor istorice, luând în considerare: sezonalitatea (lunile cu volum ridicat), tipul de client (persoană fizică vs. juridică), categoriile de tichete cu creștere accelerată și performanța departamentelor. Să se identifice și departamentele care ar putea necesita resurse suplimentare."
+
+\textbf{Complexitate}: Foarte Avansată - analiză predictivă, calcul de tendințe complexe, analiză multi-dimensională, identificare de pattern-uri.
+
+\textbf{Raport propus}: Dashboard executive cu:
+\begin{itemize}
+    \item Forecast chart (line chart cu predicții) pentru volumul de tichete
+    \item Waterfall chart pentru factorii care influențează creșterea/scăderea
+    \item Heatmap pentru identificarea categoriilor cu creștere accelerată
+    \item Alert panel pentru departamentele care necesită atenție
+    \item KPI cards pentru metrici cheie (volum estimat, resurse necesare)
+\end{itemize}
+
+\section{Cerere Complexă cu Drill-Down (Nivel 5)}
+
+\textbf{Descriere}: "Să se creeze un raport interactiv care permite analiza performanțelor pe ierarhii: la nivel de an → trimestru → lună → săptămână, cu posibilitatea de filtrare pe departamente, agenți, tipuri de clienți și categorii. Raportul trebuie să afișeze: volumul de tichete, timpul mediu de rezolvare, rating-ul mediu, costul estimativ total și eficiența (tichete rezolvate / resurse alocate)."
+
+\textbf{Complexitate}: Foarte Avansată - drill-down interactiv, analiză pe ierarhii, filtrare dinamică, calcul de eficiență, agregări pe multiple niveluri.
+
+\textbf{Raport propus}: Dashboard interactiv OLAP-style cu:
+\begin{itemize}
+    \item Pivot table cu drill-down pe ierarhie temporală
+    \item Filtre dinamice pentru toate dimensiunile
+    \item Multiple chart-uri sincronizate (bar, line, pie)
+    \item Export în Excel/PDF
+    \item Funcționalitate de "drill-through" către detalii
+\end{itemize}
+
+\chapter{Concluzii}
+\label{sec:concluzii}
+
+Acest raport prezintă analiza completă a modelului de date pentru sistemul TickLy, acoperind toate aspectele cerute:
+
+\begin{itemize}
+    \item Modelul stea implementat oferă o structură optimă pentru analize multidimensionale
+    \item Dimensiunile Type 2 SCD permit urmărirea istoricului modificărilor
+    \item Indecșii bitmap și B-tree sunt optimizați pentru tipurile de cereri frecvente
+    \item Partiționarea va îmbunătăți semnificativ performanța pentru analize temporale
+    \item Cererile formulate acoperă un spectru larg de complexitate, de la rapoarte simple la analize predictive avansate
+\end{itemize}
+
+Implementarea acestor elemente va asigura o bază solidă pentru raportare și analiză de business în sistemul TickLy.
