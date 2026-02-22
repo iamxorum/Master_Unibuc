@@ -149,9 +149,8 @@ export default function ReportsPage() {
             <span className="p-2 bg-blue-50 text-blue-600 rounded-lg shadow-sm">
                 <span className="material-symbols-outlined text-2xl">analytics</span>
             </span>
-            Dashboard Analitic
+            Dashboard
           </h1>
-          <p className="text-sm text-slate-500 mt-1 ml-14">Sursă date: Oracle Materialized Views (Actualizat la cerere)</p>
         </div>
         <button
           onClick={triggerSync}
