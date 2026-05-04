@@ -1,0 +1,22 @@
+# Summary of DWBI and MODBD Folders
+
+## DWBI (Data Warehouse and Business Intelligence)
+**Project Name:** TickLy
+**Description:** A Data Warehouse and Business Intelligence project for the TickLy support ticketing system.
+
+**Key Components & Structure:**
+- **Database Architecture:** Includes schemas for both OLTP (`TickLy DW.sql`) and Data Warehouse (`TickLy_DW_BI.sql`). Diagrams (Conceptual, ERD, Star Schema) are located in the `schema/` and `files/` directories.
+- **Frontend:** A Next.js web application located in `frontend/`, configured with TypeScript, Tailwind CSS, and PostCSS.
+- **Infrastructure:** Docker Compose (`docker-compose.yml`) is used to run the Oracle DB and other related services.
+- **Scripts:** Contains directories for ETL processes (`scripts/etl/`), initial setup (`scripts/setup/`), startup, and testing (`scripts/tests/`).
+- **Code Quality:** Uses SQLFluff for linting SQL files (`.sqlfluff`, `.sqlfluffignore`).
+
+## MODBD (Distributed Databases / Modele de Baze de Date)
+**Description:** A project focusing on distributed database systems, likely utilizing a multi-node architecture.
+
+**Key Components & Structure:**
+- **Distributed Architecture:** Contains four distinct server directories (`sv1/`, `sv2/`, `sv3/`, `sv4/`), representing the nodes of a distributed database environment.
+- **Frontend:** Includes a Next.js web application in `frontend/`, structured similarly to the DWBI project.
+- **Infrastructure:** Managed via Docker Compose (`docker-compose.yml`), which likely orchestrates the 4 server nodes and the frontend.
+- **Code Quality:** Also uses SQLFluff for maintaining SQL code standards.
+- **Documentation:** Analysis documents are kept in `docs/analysis/`.
