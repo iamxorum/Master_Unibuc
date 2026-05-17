@@ -1,0 +1,77 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+
+\title{MODBD}
+\author{nec rem}
+\date{May 2026}
+
+\begin{document}
+
+\chapter{Lista tuturor constrângerilor ce trebuie îndeplinite de model}
+\label{sec:constrangeri}
+\section{Unicitate}
+\begin{itemize}
+\item \textbf{Unicitate locală:}
+
+\begin{itemize}
+\item Câmpul \texttt{cnp} din fragmentul \texttt{CLIENT\_FIZICA} pe \textbf{SV1} trebuie să fie unic pentru a identifica persoanele fizice.
+\item Câmpul \texttt{cui} din fragmentul \texttt{CLIENT\_JURIDICA} pe \textbf{SV2} trebuie să fie unic pentru a identifica entitățile juridice.
+\end{itemize}
+
+\item \textbf{Unicitate globală pe fragmente orizontale:}
+\begin{itemize}
+
+\item Câmpul \texttt{email} din tabela \texttt{CLIENT} trebuie să fie unic la nivelul întregului sistem. Deoarece clienții sunt distribuiți între \textbf{SV1} (B2C) și \textbf{SV2} (B2B), unicitatea va fi asigurată prin interogarea ambelor noduri prin \textit{Database Links} înaintea inserării.
+
+\end{itemize}
+\item 
+\textbf{Unicitate globală pe fragmente verticale:}
+
+\begin{itemize}
+
+\item Câmpul \texttt{agent.id} asigură legătura unică între datele publice din \texttt{AGENT\_PROFIL} (\textbf{SV1}/\textbf{SV2}) și datele sensibile din \texttt{AGENT\_SEC} (\textbf{SV3}). Această unicitate este critică pentru securitatea procesului de autentificare.
+
+\end{itemize}
+\end{itemize}
+
+\section{Cheie Primară (la nivel local/global)}
+\begin{itemize}
+\item La nivel \textbf{local}, tabelele precum \texttt{ADRESA} sau \texttt{TICKET\_HISTORY} folosesc coloane de tip \texttt{IDENTITY} pentru a genera chei primare unice pe nodul respectiv.
+
+\item La nivel \textbf{global}, pentru a evita coliziunile între \texttt{client_id} generate pe \textbf{SV1} și \textbf{SV2}, se vor defini intervale de valori (Sequences) disjuncte (ex: SV1 folosește $1 \dots 10^6$, SV2 folosește $10^6+1 \dots 2 \cdot 10^6$).
+
+\end{itemize}
+
+\section{Cheie Externă (la nivel local și global)}
+
+\begin{itemize}
+\item \textbf{Chei externe locale:}
+
+\begin{itemize}
+\item \texttt{TICKET\_FIZIC.client\_id} face referință la \texttt{CLIENT\_FIZICA.client_id} pe \textbf{SV1}.\item \texttt{ADRESA.client\_id} face referință la clienții locali de pe nodurile respective.
+
+\end{itemize}
+\item \textbf{Chei externe globale (Cross-DB):}
+
+\begin{itemize}
+\item \texttt{TICKET.status\_id} face referință la tabela \texttt{STATUS} aflată pe \textbf{SV4}. Deoarece \texttt{STATUS} este replicată pe \textbf{SV1} și \textbf{SV2} ca \textit{Materialized View}, integritatea este verificată local, dar sursa de adevăr rămâne nodul central.
+
+\end{itemize}
+\end{itemize}
+
+\section{Validare (la nivel local și global)}
+\begin{itemize}
+
+\item \textbf{Validări locale (Check Constraints):}
+\begin{itemize}
+\item \texttt{client\_type} trebuie să fie 'F' sau 'J'.
+\item \texttt{este_final} din tabela \texttt{STATUS} trebuie să fie 'Y' sau 'N'.
+\item \texttt{nivel} de prioritate trebuie să fie între 1 și 5.
+
+\end{itemize}
+\item \textbf{Validări globale:}
+\begin{itemize}
+\item Un tichet nu poate fi atribuit unui agent dacă statusul \texttt{is_active} al agentului (stocat în \texttt{AGENT_PROFIL} pe \textbf{SV1}/\textbf{SV2}) este 'N'.\end{itemize}
+\end{itemize}
+
+\end{document}
