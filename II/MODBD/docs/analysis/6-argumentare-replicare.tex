@@ -1,10 +1,20 @@
-Relatii replicate in proiect:
-STATUS, PRIORITATE, CATEGORIE, TAG, TOPIC
+\chapter{Replicarea relațiilor}
+\label{sec:replicare}
 
-Aceste relatii au un volum redus de date si sunt utilizate frecvent de toate componentele sistemului
-distribuit. Replicarea lor ofera avantaje precum:
-- acces local rapid la date
-- imbunatatirea performantei interogarilor
-- creste disponibilitatea sistemului
+\section*{a. Relații replicate în proiect}
 
-De asemenea, costul sincronizarii este redus deoarece datele sunt modificate rar
+Următoarele relații au fost replicate la nivelul sistemului: \textit{STATUS}, \textit{PRIORITATE}, \textit{CATEGORIE}, \textit{TAG} și \textit{TOPIC}.
+
+\section*{b. Motivație și avantaje}
+
+Aceste relații au un volum redus de date și sunt utilizate frecvent de toate componentele sistemului distribuit. Replicarea lor oferă avantaje semnificative, precum:
+
+\begin{itemize}
+    \item \textbf{Acces local rapid la date.}
+    \item \textbf{Îmbunătățirea performanței interogărilor} (elimină necesitatea accesului prin rețea pentru obținerea detaliilor de bază).
+    \item \textbf{Creșterea disponibilității sistemului.}
+\end{itemize}
+
+\section*{c. Costuri de sincronizare}
+
+De asemenea, costul sincronizării între nodurile sistemului distribuit este redus, deoarece datele din aceste relații (fiind în general de tip nomenclator) sunt modificate foarte rar.

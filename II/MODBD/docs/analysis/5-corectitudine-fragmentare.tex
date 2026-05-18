@@ -1,32 +1,36 @@
-Am verificat corectitudinea fragmentarii analizand cele trei reguli fundamentale prezentate la curs:
-completitudine, reconstructie, disjunctie.
+\chapter{Verificarea corectitudinii fragmentării}
+\label{sec:corectitudine}
 
-1. Verificare completitudinii
-Presupune ca fiecare tuplu din relatia initiala sa se regaseasca in cel putin unul din fragmentele obtinute
+Am verificat corectitudinea fragmentării analizând cele trei reguli fundamentale: completitudine, reconstrucție și disjuncție.
 
-Relatia CLIENT a fost fragmentata in functie de tipul clientului astfel:
-Clientii care au atributul client_type setat la valoarea 'F' -> CLIENT_FIZIC
-Clientii care au atributul client_type setat la valoarea 'J' -> CLIENT_JURIDIC
+\section*{a. Verificarea completitudinii}
 
-Constrangerea CHECK (client_type IN ('F', 'J')) ne asigura ca fiecare client apartine obligatoriu unuia
-din cele doua fragmente
+Această regulă presupune ca fiecare tuplu din relația inițială să se regăsească în cel puțin unul din fragmentele obținute.
 
-2. Verificarea reconstructiei
-Permite obtinerea relatiei initiale fara pierdere de informatie din fragmentele rezultate
+Relația \textit{CLIENT} a fost fragmentată în funcție de tipul clientului astfel:
+\begin{itemize}
+    \item Clienții care au atributul \textit{client\_type} setat la valoarea 'F' $\rightarrow$ \textit{CLIENT\_FIZIC}.
+    \item Clienții care au atributul \textit{client\_type} setat la valoarea 'J' $\rightarrow$ \textit{CLIENT\_JURIDIC}.
+\end{itemize}
 
-Pentru fragmentarea orizontala reconstructia se face prin reuniune:
+Constrângerea \textit{CHECK (client\_type IN ('F', 'J'))} ne asigură că fiecare client aparține obligatoriu unuia din cele două fragmente.
 
-CLIENT = CLIENT_FIZIC UNION ALL CLIENT_JURIDIC;
+\section*{b. Verificarea reconstrucției}
 
-Este asigurata prin view-uri globale (V_TICKET_AGENT), reunind fragmentele si permitand aplicatiei sa
-acceseze datele ca pe o singura relatie logica
+Permite obținerea relației inițiale fără pierdere de informație din fragmentele rezultate.
 
-Pentru fragmentarea verticala reconstructia se face prin join pe cheia primara comuna. Daca informatiile
-despre client sunt impartite in date generale si specifice, relatia poate fi refacuta prin join pe client_id
+\textbf{i. Pentru fragmentarea orizontală}\\
+Reconstrucția se face prin operația de reuniune: 
+\begin{center}
+    \textit{CLIENT = CLIENT\_FIZIC UNION ALL CLIENT\_JURIDIC}
+\end{center}
+Acest lucru este asigurat prin view-uri globale (de exemplu, \textit{V\_TICKET\_AGENT}), care reunesc fragmentele și permit aplicației să acceseze datele ca pe o singură relație logică.
 
-3. Verificarea disjunctiei
-Daca acelasi tuplu nu apare simultan in mai multe fragmente (cu exceptia atributelor cheie necesare
-reconstructiei fragmentarii verticale) atunci fragmentarea este disjuncta
+\textbf{ii. Pentru fragmentarea verticală}\\
+Reconstrucția se face prin operația de join pe cheia primară comună. De exemplu, dacă informațiile despre client ar fi împărțite în date generale și specifice, relația inițială poate fi refăcută printr-un join pe atributul \textit{client\_id}.
 
-Fragmentele CLIENT_FIZIC si CLIENT_JURIDIC sunt disjuncte deoarece un client nu poate avea simultan
-client_type = 'F' si client_type = 'J'
+\section*{c. Verificarea disjuncției}
+
+Dacă același tuplu nu apare simultan în mai multe fragmente (cu excepția atributelor cheie necesare reconstrucției în cazul fragmentării verticale), atunci fragmentarea este considerată disjunctă.
+
+Fragmentele \textit{CLIENT\_FIZIC} și \textit{CLIENT\_JURIDIC} sunt disjuncte, deoarece un client nu poate avea simultan atributul \textit{client\_type} egal cu 'F' și cu 'J'.
