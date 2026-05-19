@@ -28,6 +28,7 @@ export async function GET(
   }
 
   const userType = (session.userType || "B2C") as "B2C" | "B2B" | "AGENT";
+  const isAgent = session.role === "agent";
 
   try {
     const result = await runQueryByUserType(userType, async (conn) => {
@@ -38,6 +39,15 @@ export async function GET(
       const ticketHistoryTable = getTableName(userType, "ticket_history");
 
       const clientNameField = userType === "AGENT" ? "c.nume_client" : "c.display_name";
+
+      // SECURIZARE: Dacă este client, adăugăm filtru pe client_id direct în SQL
+      let securityWhere = "";
+      const queryBinds: Record<string, any> = { id };
+      
+      if (!isAgent) {
+        securityWhere = " AND t.client_id = :client_id";
+        queryBinds.client_id = session.id;
+      }
 
       const ticketResult = await conn.execute(
         `SELECT t.ticket_id, t.client_id, t.status_id, t.prioritate_id, t.categorie_id,
@@ -52,18 +62,28 @@ export async function GET(
          JOIN TICKLY.PRIORITATE p ON p.prioritate_id = t.prioritate_id
          LEFT JOIN TICKLY.CATEGORIE cat ON cat.categorie_id = t.categorie_id
          JOIN ${clientTable} c ON c.client_id = t.client_id
-         WHERE t.ticket_id = :id`,
-        [id]
+         WHERE t.ticket_id = :id ${securityWhere}`,
+        queryBinds
       );
 
       const ticketRows = (ticketResult.rows as Record<string, unknown>[]) || [];
       if (ticketRows.length === 0) return null;
 
       const t = ticketRows[0];
-      const isJuridic = t.TIP_SURSA === 'JURIDIC';
-
       
-      const actualAgentLinkTable = isJuridic ? "TICKLY.ticket_agent_juridic@LINK_SV2" : "TICKLY.ticket_agent_fizic";
+      // REGULĂ CONEXIUNE: Identificăm dacă datele aparțin bazei de date juridice (B2B)
+      const isRemoteJuridic = t.TIP_SURSA === 'JURIDIC';
+      const isCurrentlyB2B = userType === "B2B";
+      const isJuridicContext = isRemoteJuridic || isCurrentlyB2B;
+
+      // DB Link se aplică DOAR dacă un AGENT (aflat pe SV1) accesează un tichet marcat ca JURIDIC (pe SV2)
+      const suffix = (userType === "AGENT" && isRemoteJuridic) ? "@LINK_SV2" : "";
+
+      // Stabilim tabelele asimilate contextului curent
+      const actualAgentLinkTable = isJuridicContext 
+        ? `TICKLY.ticket_agent_juridic${suffix}` 
+        : "TICKLY.ticket_agent_fizic";
+
       const agentAssignResult = await conn.execute(
         `SELECT ta.agent_id, ap.prenume || ' ' || ap.nume as agent_nume
          FROM ${actualAgentLinkTable} ta
@@ -96,9 +116,9 @@ export async function GET(
         } : null
       };
 
-      const actualCommentClient = isJuridic ? "TICKLY.comment_client_juridic@LINK_SV2" : commentClientTable;
-      const actualCommentAgent = isJuridic ? "TICKLY.comment_agent_juridic@LINK_SV2" : commentAgentTable;
-      const actualHistoryTable = isJuridic ? "TICKLY.ticket_history_juridic@LINK_SV2" : ticketHistoryTable;
+      const actualCommentClient = isJuridicContext ? `TICKLY.comment_client_juridic${suffix}` : commentClientTable;
+      const actualCommentAgent = isJuridicContext ? `TICKLY.comment_agent_juridic${suffix}` : commentAgentTable;
+      const actualHistoryTable = isJuridicContext ? `TICKLY.ticket_history_juridic${suffix}` : ticketHistoryTable;
 
       const commentsResult = await conn.execute(
         `SELECT comment_id, content, created_date, source, author_name, author_id, is_internal FROM (
@@ -130,6 +150,7 @@ export async function GET(
         author_id: c.AUTHOR_ID != null ? Number(c.AUTHOR_ID) : null,
         is_internal: (c.IS_INTERNAL as string) === "Y",
       }));
+      
       if (session.role === "client") {
         comments = comments.filter((c) => !c.is_internal);
       }
@@ -160,9 +181,12 @@ export async function GET(
     if (result == null) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
-    if (session.role === "client" && result.clientId !== session.id) {
+    
+    // Failsafe adițional de securitate pe backend
+    if (!isAgent && result.clientId !== session.id) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
+
     return NextResponse.json({ ticket: result.ticket, comments: result.comments, timeline: result.timeline, attachments: result.attachments });
   } catch (e) {
     console.error("ticket detail api", e);
@@ -197,6 +221,7 @@ export async function PATCH(
   }
 
   const userType = (session.userType || "B2C") as "B2C" | "B2B" | "AGENT";
+  const isAgent = session.role === "agent";
 
   let body: PatchBody;
   try {
@@ -205,45 +230,49 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const isAgent = session.role === "agent";
   if (!isAgent && (body.status_id != null || body.prioritate_id != null || body.categorie_id !== undefined || body.assigned_agent_id !== undefined)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    await runQueryByUserType(userType, async (conn) => {
-      
+    const errorResult = await runQueryByUserType(userType, async (conn) => {
+      // Verificăm dacă tichetul există și dacă aparține clientului (atunci când nu e agent)
+      let securityCheckWhere = "";
+      const checkBinds: Record<string, any> = { id };
+
+      if (!isAgent) {
+        securityCheckWhere = " AND client_id = :client_id";
+        checkBinds.client_id = session.id;
+      }
+
       const checkResult = await conn.execute(
-        `SELECT ${userType === "AGENT" ? "tip_client" : "'LOCAL'"} as tip 
-         FROM ${getTableName(userType, "ticket")} WHERE ticket_id = :id`,
-        [id]
+        `SELECT ${userType === "AGENT" ? "tip_client" : "'LOCAL'"} as tip, client_id 
+         FROM ${getTableName(userType, "ticket")} WHERE ticket_id = :id ${securityCheckWhere}`,
+        checkBinds
       );
+      
       const rowsCheck = (checkResult.rows as any[]) || [];
-      if (rowsCheck.length === 0) return;
+      if (rowsCheck.length === 0) {
+        return { status: 404, error: "Ticket not found" };
+      }
 
       const isRemoteJuridic = rowsCheck[0].TIP === 'JURIDIC';
-      
+      const isCurrentlyB2B = userType === "B2B";
+      const isJuridicContext = isRemoteJuridic || isCurrentlyB2B;
+      const suffix = (userType === "AGENT" && isRemoteJuridic) ? "@LINK_SV2" : "";
       
       let physicalTable: string;
       let physicalHistoryTable: string;
 
       if (userType === "AGENT") {
-        physicalTable = isRemoteJuridic ? "TICKLY.ticket_juridic@LINK_SV2" : "TICKLY.ticket_fizic";
-        physicalHistoryTable = isRemoteJuridic ? "TICKLY.ticket_history_juridic@LINK_SV2" : "TICKLY.ticket_history_fizic";
+        physicalTable = isRemoteJuridic ? `TICKLY.ticket_juridic${suffix}` : "TICKLY.ticket_fizic";
+        physicalHistoryTable = isRemoteJuridic ? `TICKLY.ticket_history_juridic${suffix}` : "TICKLY.ticket_history_fizic";
       } else {
         physicalTable = getTableName(userType, "ticket");
         physicalHistoryTable = getTableName(userType, "ticket_history");
       }
 
-      const ownTicketCheck = await conn.execute(
-        `SELECT client_id FROM ${physicalTable} WHERE ticket_id = :id`,
-        [id]
-      );
-      const rows = (ownTicketCheck.rows as Record<string, unknown>[]) || [];
-      const ticketClientId = rows[0]?.CLIENT_ID != null ? Number(rows[0].CLIENT_ID) : null;
-      const canEditTicket = isAgent || ticketClientId === session.id;
-
-      if (body.titlu !== undefined && canEditTicket) {
+      if (body.titlu !== undefined) {
         const newTitlu = (body.titlu ?? "").trim() || null;
         if (newTitlu != null) {
           await conn.execute(
@@ -258,7 +287,7 @@ export async function PATCH(
         }
       }
 
-      if (body.descriere !== undefined && canEditTicket) {
+      if (body.descriere !== undefined) {
         const newDesc = body.descriere === null || body.descriere === "" ? null : body.descriere;
         await conn.execute(
           `UPDATE ${physicalTable} SET descriere = :descriere WHERE ticket_id = :id`,
@@ -271,7 +300,7 @@ export async function PATCH(
         );
       }
 
-      if (!isAgent) return;
+      if (!isAgent) return null;
 
       if (body.status_id != null || body.prioritate_id != null || body.categorie_id !== undefined) {
         const updates: string[] = [];
@@ -307,26 +336,21 @@ export async function PATCH(
       }
 
       if (body.assigned_agent_id !== undefined) {
-        
-        
-        const actualTicketAgentTable = isRemoteJuridic 
-          ? "TICKLY.ticket_agent_juridic@LINK_SV2" 
+        const actualTicketAgentTable = isJuridicContext 
+          ? `TICKLY.ticket_agent_juridic${suffix}` 
           : "TICKLY.ticket_agent_fizic";
 
-        
         await conn.execute(
           `DELETE FROM ${actualTicketAgentTable} WHERE ticket_id = :id AND rol = 'PRIMARY'`, 
           [id]
         );
 
-        
         if (body.assigned_agent_id != null) {
           await conn.execute(
             `INSERT INTO ${actualTicketAgentTable} (ticket_id, agent_id, rol) 
              VALUES (:id, :agent_id, 'PRIMARY')`,
             { id, agent_id: body.assigned_agent_id }
           );
-          
           
           await conn.execute(
             `INSERT INTO ${physicalHistoryTable} (ticket_id, event_type, created_by_role, created_by_id, author_name, display_text)
@@ -340,7 +364,12 @@ export async function PATCH(
           );
         }
       }
+      return null;
     });
+
+    if (errorResult) {
+      return NextResponse.json({ error: errorResult.error }, { status: errorResult.status });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

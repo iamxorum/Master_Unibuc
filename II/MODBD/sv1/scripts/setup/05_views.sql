@@ -17,10 +17,14 @@ SELECT ticket_id, client_id, prioritate_id, status_id, categorie_id, titlu, desc
 FROM TICKLY.ticket_juridic@LINK_SV2;
 
 CREATE OR REPLACE VIEW TICKLY.V_CLIENT_FIZIC_AUTH AS
-SELECT c.client_id, c.prenume || ' ' || c.nume AS display_name, s.email, s.password_hash
-FROM TICKLY.client_fizic c
-INNER JOIN TICKLY.client_fizic_sec@LINK_SV3 s ON c.client_id = s.client_id
-WHERE s.is_active = 'Y';
+SELECT 
+    sec.client_id,
+    prof.nume || ' ' || prof.prenume AS display_name,
+    sec.email,
+    sec.password_hash,
+    sec.is_active
+FROM TICKLY.CLIENT_FIZIC_SEC@LINK_SV3 sec
+JOIN TICKLY.client_fizic prof ON prof.client_id = sec.client_id;
 
 CREATE OR REPLACE VIEW TICKLY.V_AGENT_AUTH AS
 SELECT p.agent_id, p.prenume || ' ' || p.nume AS display_name, s.email, s.password_hash
