@@ -34,3 +34,40 @@ Reconstrucția se face prin operația de join pe cheia primară comună. De exem
 Dacă același tuplu nu apare simultan în mai multe fragmente (cu excepția atributelor cheie necesare reconstrucției în cazul fragmentării verticale), atunci fragmentarea este considerată disjunctă.
 
 Fragmentele \textit{CLIENT\_FIZIC} și \textit{CLIENT\_JURIDIC} sunt disjuncte, deoarece un client nu poate avea simultan atributul \textit{client\_type} egal cu 'F' și cu 'J'.
+
+\chapter{Integritatea și Corectitudinea Datelor}
+\label{sec:integritate_corectitudine}
+În această etapă, am analizat mecanismele prin care sistemul distribuit garantează validitatea datelor, atât prin validarea structurii fragmentării, cât și prin aplicarea constrângerilor de integritate locale și globale.
+\section{Verificarea corectitudinii fragmentării}
+Am verificat corectitudinea procesului de fragmentare analizând cele trei reguli fundamentale: completitudine, reconstrucție și disjuncție.
+\subsection{Verificarea completitudinii}
+Această regulă presupune ca fiecare tuplu din relația inițială să se regăsească în cel puțin unul din fragmentele obținute. Relația \textit{CLIENT} a fost fragmentată în funcție de tipul clientului astfel:
+\begin{itemize}
+\item Clienții cu atributul \textit{client\_type} = 'F' → \textit{CLIENT\_FIZIC}.
+\item Clienții cu atributul \textit{client\_type} = 'J' → \textit{CLIENT\_JURIDIC}.
+\end{itemize}
+Constrângerea \textit{CHECK (client\_type IN ('F', 'J'))} ne asigură că fiecare client aparține obligatoriu unuia din cele două fragmente, nicio înregistrare nefiind omisă.
+\subsection{Verificarea reconstrucției}
+Permite obținerea relației inițiale fără pierdere de informație.
+\begin{itemize}
+\item \textbf{Fragmentarea orizontală:} Reconstrucția se face prin operația de reuniune:
+\begin{center} \textit{CLIENT = CLIENT\_FIZIC ∪ CLIENT\_JURIDIC} \end{center}
+Aceasta este implementată prin view-uri globale care permit aplicației accesul transparent la setul complet de date.
+\item \textbf{Fragmentarea verticală:} Reconstrucția se face prin operația de join pe cheia primară comună (ex: \textit{client\_id}).
+\end{itemize}
+\subsection{Verificarea disjuncției}
+Fragmentele sunt disjuncte dacă un tuplu nu apare simultan în mai multe locații (cu excepția cheilor la fragmentarea verticală). În cazul nostru, fragmentele sunt disjuncte deoarece un client nu poate avea simultan tipul 'F' și 'J'.
+\section{Asigurarea constrângerilor de integritate}
+Sistemul implementează un model hibrid de integritate, acoperind atât validările la nivel de nod local, cât și consistența referențială între servere diferite.
+\subsection{Integritatea la nivel local}
+La nivel local, integritatea este asigurată prin constrângeri standard definite direct în schema tabelelor:
+\begin{itemize}
+\item \textbf{PRIMARY KEY:} Asigură identificarea unică a înregistrărilor (ex: \textit{ticket\_id}, \textit{client\_id}).
+\item \textbf{FOREIGN KEY:} Menține relațiile între entitățile de pe același nod (ex: relația dintre \textit{TICKET\_FIZIC} și \textit{STATUS}).
+\item \textbf{UNIQUE:} Previne duplicarea valorilor critice, precum adresele de email ale clienților.
+\item \textbf{CHECK:} Validează domeniul de valori acceptate (ex: \textit{client\_type} IN ('F', 'J'), \textit{este\_final} IN ('Y', 'N')).
+\item \textbf{NOT NULL:} Garantează prezența datelor în câmpurile obligatorii pentru procesul de business.
+\end{itemize}
+\subsection{Integritatea la nivel global}
+Deoarece relațiile sunt distribuite în baze de date diferite, constrângerile referențiale clasice nu pot fi aplicate direct între servere prin mecanismele standard ale DB engine-ului.
+Pentru a preveni inserarea sau actualizarea unor tichete cu referințe invalide, am implementat triggere distribuite. Acestea interceptează operațiile LMD și verifică, prin conexiuni de tip database link sau API-uri interne, existența valorilor de control (cum ar fi \textit{status\_id} și \textit{prioritate\_id}) în baza de date Master înainte de a permite finalizarea tranzacției pe nodul local.
