@@ -18,7 +18,6 @@ export async function GET(request: Request) {
   const statusFilter = searchParams.get("statusFilter") ?? "all";
   const statusNames = searchParams.get("status");
 
-  
   const userType = (session.userType || "B2C") as "B2C" | "B2B" | "AGENT";
 
   try {
@@ -46,7 +45,6 @@ export async function GET(request: Request) {
         ? statusNames.split(",").map((n) => n.trim()).filter(Boolean)
         : [];
 
-      
       const countBinds: Record<string, unknown> = {};
       if (isClient) countBinds.client_id = session.id;
       statusNamesList.forEach((name, i) => {
@@ -54,7 +52,6 @@ export async function GET(request: Request) {
       });
       const pageBinds = { ...countBinds, off: (page - 1) * limit, lim: limit };
 
-      
       const countSql =
         `SELECT COUNT(*) AS cnt FROM ${ticketTable} t JOIN Tickly.status s ON s.status_id = t.status_id WHERE ` +
         whereClause;
@@ -84,7 +81,6 @@ export async function GET(request: Request) {
         ticket_id: row.TICKET_ID,
         titlu: row.TITLU,
         data_creare: row.DATA_CREARE,
-        
         data_ultima_actualizare: row.DATA_CREARE, 
         data_rezolvare: row.DATA_REZOLVARE,
         status_nume: row.STATUS_NUME,
@@ -156,17 +152,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Trebuie să fii autentificat pentru a crea un tichet." }, { status: 401 });
   }
 
-  const userType = (session.userType || "B2C") as "B2C" | "B2B" | "AGENT";
-
-  if (userType === "AGENT") {
-    return NextResponse.json({ error: "Agenții nu pot crea tichete." }, { status: 403 });
-  }
-
   try {
     const body = await request.json();
-    
-    const { titlu, descriere, prioritate_id, categorie_id } = body;
+    const { titlu, descriere, prioritate_id, categorie_id, client_type, client_id, is_agent_creation } = body;
 
+    const isAgent = session.role === "agent";
+    
+    // Stabilim baza de date (PDB-ul țintă) și ID-ul clientului
+    let targetUserType: "B2C" | "B2B" = (session.userType as "B2C" | "B2B") || "B2C";
+    let targetClientId = session.id;
+
+    if (isAgent) {
+      if (!client_type || !client_id) {
+        return NextResponse.json(
+          { error: "Ca agent, trebuie să selectezi tipul și ID-ul clientului." },
+          { status: 400 }
+        );
+      }
+      // Suprascriem variabilele țintă cu selecția agentului din formular
+      targetUserType = client_type as "B2C" | "B2B";
+      targetClientId = client_id;
+    } else if (session.userType === "AGENT") {
+      // Failsafe pentru a asigura ca un user cu rol incorect dar userType AGENT sa nu treacă
+      return NextResponse.json({ error: "Sesiune invalidă." }, { status: 403 });
+    }
+
+    // Validări de bază
     if (!titlu || !categorie_id || !prioritate_id) {
       return NextResponse.json(
         { error: "Te rog completează toate câmpurile obligatorii (Titlu, Categorie, Prioritate)." }, 
@@ -174,8 +185,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await runQueryByUserType(userType, async (conn) => {
-      const ticketTable = getTableName(userType, "ticket");
+    // Rulăm query-ul către baza de date B2C sau B2B, în funcție de targetUserType
+    const result = await runQueryByUserType(targetUserType, async (conn) => {
+      const ticketTable = getTableName(targetUserType, "ticket");
 
       const statusRes = await conn.execute(
         `SELECT status_id FROM Tickly.status WHERE este_final = 'N' ORDER BY status_id FETCH FIRST 1 ROWS ONLY`
@@ -187,7 +199,6 @@ export async function POST(request: Request) {
       if (!defaultStatusId) {
         throw new Error("Nu s-a găsit niciun status valid (nefinal) în baza de date.");
       }
-
       
       const sql = `
         INSERT INTO ${ticketTable}
@@ -200,7 +211,7 @@ export async function POST(request: Request) {
       const cleanBind = (val: any) => (val === undefined || val === "" || Number.isNaN(val) ? null : val);
 
       const binds = {
-        client_id: session.id,
+        client_id: targetClientId, // Folosim target-ul (fie din sesiune, fie suprascris de agent)
         prio_id: Number(prioritate_id),
         stat_id: defaultStatusId,
         cat_id: Number(categorie_id),
