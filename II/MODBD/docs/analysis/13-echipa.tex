@@ -1,34 +1,36 @@
 \chapter{Repartiția Task-urilor}
+
 \label{sec:repartitie_taskuri}
 
 \section{Murariu Andrei Ștefănel (Coordonator)}
-\textbf{Rol:} Arhitect, Lead Front-end \& Back-end.
+Set-up infrastructura pe servere prin docker containers pe 3 vps-uri + design.
+\textbf{Rol:} Arhitect Sistem Distribuit \& Lead Full-stack.
 \begin{itemize}
-    \item \textbf{Analiză:} Definire obiective aplicație (1), formulare cereri complexe și rapoarte DW (9, 10), strategie indici (6).
-    \item \textbf{Back-end:} Optimizare SQL prin planuri de execuție (9), implementare scripturi rapoarte DW (10), definire și testare partiții (8).
-    \item \textbf{Front-end:} Coordonare dezvoltare Next.js și integrare vizualizări grafice.
+\item \textbf{Analiză:} Definirea obiectivelor aplicației și a strategiei de distribuire a datelor pe servere (1, 3). Argumentarea deciziilor de fragmentare verticală și aplicarea algoritmilor aferenți (5.c).
+\item \textbf{Back-end:} Implementarea formelor de transparență pentru fragmentele verticale (4.a). Asigurarea sincronizării datelor pentru relațiile replicate (5).
+\item \textbf{Front-end:} Coordonarea dezvoltării în Next.js și implementarea modului de vizualizare a informațiilor la nivelul bazei de date globale (2).
 \end{itemize}
 
 \section{Mitroaica Constantin-Matei}
-\textbf{Rol:} Administrator Model Date \& Dezvoltator BI.
+\textbf{Rol:} Administrator Baze de Date  Dezvoltator Backend.
 \begin{itemize}
-    \item \textbf{Analiză:} Proiectare diagramă stea/fulg (3), identificare obiecte tip dimensiune (7), stabilire strategie partiționare (8).
-    \item \textbf{Back-end:} Implementare flux ETL populare DW (4), definire și validare dimensiuni (7), definire indici și analiză planuri execuție (6).
-    \item \textbf{Front-end:} Dezvoltare componente vizualizare date (Charts).
+\item \textbf{Analiză:} Elaborarea diagramei entitate-relație (ERD) și a diagramei conceptuale pentru modelul OLTP (2). Argumentarea deciziilor de fragmentare orizontală primară (5.a).
+\item \textbf{Back-end:} Crearea infrastructurii de baze de date, a utilizatorilor și a schemelor conceptuale locale (1, 7). Implementarea transparenței pentru fragmentele orizontale (4.b).
+\item \textbf{Front-end:} Dezvoltarea componentelor pentru gestionarea informațiilor la nivelul bazelor de date locale (1).
 \end{itemize}
 
 \section{Cornea Alexandru-Gheorghe}
-\textbf{Rol:} Database Developer (OLTP \& DW).
+\textbf{Rol:} Database Developer \& Backend Engineer.
 \begin{itemize}
-    \item \textbf{Analiză:} Diagrame OLTP E-R și Conceptuală (2), descriere câmpuri DW și reguli populare (4), justificare constrângeri DW (5).
-    \item \textbf{Back-end:} Creare baze date OLTP/DW și utilizatori (1, 3), generare și inserare date test (2), definire constrângeri integritate (5).
-    \item \textbf{Front-end:} Integrare logică back-end cu rutele API ale interfeței.
+\item \textbf{Analiză:} Stabilirea și documentarea listei complete de constrângeri de integritate: unicitate locală/globală, chei primare și externe distribuite (9.a, 9.b, 9.c).
+\item \textbf{Back-end:} Definirea și crearea fragmentelor și a relațiilor în bazele de date (2). Implementarea mecanismelor de asigurare a constrângerilor de integritate la nivel local și global (6).
+\item \textbf{Front-end:} Implementarea funcționalităților de verificare a propagării operațiilor LMD de la nivel global către bazele locale (4).
 \end{itemize}
 
 \section{Reti Matei}
-\textbf{Rol:} .
+\textbf{Rol:} Data Engineer \& Full-stack Developer.
 \begin{itemize}
-    \item \textbf{Analiză:} Diagrame OLTP E-R și Conceptuală (2), descriere câmpuri DW și reguli populare (4), justificare constrângeri DW (5).
-    \item \textbf{Back-end:} Creare baze date OLTP/DW și utilizatori (1, 3), generare și inserare date test (2), definire constrângeri integritate (5).
-    \item \textbf{Front-end:} Integrare logică back-end cu rutele API ale interfeței.
+\item \textbf{Analiză:} Argumentarea deciziilor de fragmentare orizontală derivată (5.b) și a strategiei de replicare a relațiilor (6). Verificarea corectitudinii fragmentărilor realizate (8).
+\item \textbf{Back-end:} Popularea bazelor de date cu date de test (3). Implementarea transparenței pentru tabelele stocate pe alte stații (4.c) și validarea datelor la nivel distribuit (9.d).
+\item \textbf{Front-end:} Integrarea logicii de vizualizare a modificărilor locale în interfața globală (3).
 \end{itemize}
