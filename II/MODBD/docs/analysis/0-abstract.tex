@@ -1,7 +1,10 @@
 \begin{abstractpage}
 
 \begin{abstract}{romanian}
-Acest raport descrie analiza modelului de date pentru TickLy, un sistem de management al tichetelor de suport, în contextul proiectului de Data Warehouse și Business Intelligence. Prezentăm modelul entitate–relație extins al bazei OLTP, diagrama conceptuală extinsă și modelul stea al depozitului, cu un tabel de fapte (\texttt{FACT\_TICKET}) și cinci tabele dimensiune. Detaliem câmpurile fiecărui tabel din DW și modul de populare din OLTP, constrângerile și indecșii specifici depozitelor de date, obiectele de tip dimensiune, partiționarea tabelelor, o cerere SQL complexă cu tehnici de optimizare și cinci cereri specifice DW, cu grad diferit de complexitate, concretizate în rapoarte și grafice.
+Acest raport descrie analiza modelului de date pentru TickLy, un sistem de management al tichetelor de suport, în contextul continuarii proiectului de Data Warehouse și Business Intelligence la cursul de master Metode de optimizare și
+distribuire în baze de date. 
+Prezentăm modelul entitate-relație extins al bazei OLTP, diagrama conceptuală extinsă, diagrama a variantei distribuite si subdiagrame a cum este fiecare baza de date distribuita. 
+In contextul distribuirii s-a ales impartirea intre clienti B2C si B2B (2 servere), un alt server distribuit pentru stocarea datelor de autentificare (mail si parole) si un ultim server pentru nomenclatoare care sunt replicate pe Serverele fragmentate orizontal.
 \end{abstract}
 
 \end{abstractpage}
