@@ -29,7 +29,7 @@ export const DB_CONFIG = {
   SV2_B2B: {
     name: "SV2",
     type: "B2B",
-    port: 1521,
+    port: 1523,
     pdb: "PDB2",
     tables: {
       

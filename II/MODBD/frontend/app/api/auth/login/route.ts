@@ -15,70 +15,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
     }
 
-    let found: Session | null = null;
-
-    
-    
-    found = await runQueryByUserType("B2C", async (conn) => {
-      const result = await conn.execute(
-        `SELECT client_id, password_hash, display_name FROM TICKLY.V_CLIENT_FIZIC_AUTH WHERE email = :email`,
-        [email]
-      );
-      const rows = (result.rows as Record<string, unknown>[]) || [];
-      if (rows.length > 0 && (await compare(password, String(rows[0].PASSWORD_HASH)))) {
-        return {
-          role: "client" as const,
-          id: Number(rows[0].CLIENT_ID),
-          email,
-          name: String(rows[0].DISPLAY_NAME), 
-          userType: "B2C" as const,
-        };
-      }
-      return null;
-    }).catch(err => { console.error("Login SV1 (B2C) Error:", err.message); return null; });
-
-    
-    
-    if (!found) {
-      found = await runQueryByUserType("B2B", async (conn) => {
+    const [b2cResult, b2bResult, agentResult] = await Promise.allSettled([
+      runQueryByUserType("B2C", async (conn) => {
+        const result = await conn.execute(
+          `SELECT client_id, password_hash, display_name FROM TICKLY.V_CLIENT_FIZIC_AUTH WHERE email = :email`,
+          [email]
+        );
+        return { rows: result.rows as any[], type: "B2C", role: "client" };
+      }),
+      runQueryByUserType("B2B", async (conn) => {
         const result = await conn.execute(
           `SELECT client_id, password_hash, display_name FROM TICKLY.V_CLIENT_JURIDIC_AUTH WHERE email = :email`,
           [email]
         );
-        const rows = (result.rows as Record<string, unknown>[]) || [];
-        if (rows.length > 0 && (await compare(password, String(rows[0].PASSWORD_HASH)))) {
-          return {
-            role: "client" as const,
-            id: Number(rows[0].CLIENT_ID),
-            email,
-            name: String(rows[0].DISPLAY_NAME), 
-            userType: "B2B" as const,
-          };
-        }
-        return null;
-      }).catch(err => { console.error("Login SV2 (B2B) Error:", err.message); return null; });
-    }
-
-    
-    if (!found) {
-      found = await runQueryByUserType("AGENT", async (conn) => {
+        return { rows: result.rows as any[], type: "B2B", role: "client" };
+      }),
+      runQueryByUserType("AGENT", async (conn) => {
         const result = await conn.execute(
           `SELECT agent_id, password_hash, display_name FROM TICKLY.V_AGENT_AUTH WHERE email = :email`,
           [email]
         );
-        const rows = (result.rows as Record<string, unknown>[]) || [];
-        if (rows.length > 0 && (await compare(password, String(rows[0].PASSWORD_HASH)))) {
+        return { rows: result.rows as any[], type: "AGENT", role: "agent" };
+      })
+    ]);
+
+    const checkPassword = async (promiseResult: any) => {
+      if (promiseResult.status === "fulfilled" && promiseResult.value.rows.length > 0) {
+        const user = promiseResult.value.rows[0];
+        const isValid = await compare(password, String(user.PASSWORD_HASH));
+        if (isValid) {
           return {
-            role: "agent" as const,
-            id: Number(rows[0].AGENT_ID),
+            role: promiseResult.value.role,
+            id: Number(user.CLIENT_ID || user.AGENT_ID),
             email,
-            name: String(rows[0].DISPLAY_NAME), 
-            userType: "AGENT" as const,
-          };
+            name: String(user.DISPLAY_NAME),
+            userType: promiseResult.value.type,
+          } as Session;
         }
-        return null;
-      }).catch(err => { console.error("Login SV1 (AGENT) Error:", err.message); return null; });
-    }
+      }
+      return null;
+    };
+
+    const found = (await checkPassword(b2cResult)) 
+               || (await checkPassword(b2bResult)) 
+               || (await checkPassword(agentResult));
 
     if (!found) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
