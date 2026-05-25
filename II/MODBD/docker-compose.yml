@@ -47,8 +47,8 @@ services:
       - sv2
     restart: unless-stopped
     ports:
-      - "1521:1521"
-      - "5500:5500"
+      - "1523:1521"
+      - "5502:5500"
     environment:
       ORACLE_SID: "${ORACLE_SID:-DB2}"
       ORACLE_PDB: "${ORACLE_PDB:-PDB2}"
